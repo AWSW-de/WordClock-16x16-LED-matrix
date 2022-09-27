@@ -10,9 +10,8 @@ Code for the <a href="https://www.printables.com/model/282751-wordclock-16x16-le
 
 <img src="./F20ED3AA-B97E-43EE-9D21-12775BF20498.jpeg">
 
-<img src="./31DC6F2B-8755-48DF-83D6-7A609DD26B0C.jpeg">
-
 <img src="./28081C94-D1D9-473A-9291-1BDA34C48F0D.jpeg">
 
+<img src="./31DC6F2B-8755-48DF-83D6-7A609DD26B0C.jpeg">
 
-Note: Will be released later
+Note: Will be released later... Currently in progress...
