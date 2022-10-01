@@ -14,4 +14,8 @@ Code for the <a href="https://www.printables.com/model/282751-wordclock-16x16-le
 
 <img src="./31DC6F2B-8755-48DF-83D6-7A609DD26B0C.jpeg">
 
+<img src="./4D79B500-C094-491F-8B45-757F55E157F1.jpeg">
+
+<img src="./DFCC666E-C7B4-48D8-A4CD-474EF23131F3.jpeg">
+
 Note: Will be released later... Currently in progress...
