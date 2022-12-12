@@ -32,6 +32,7 @@
 // # - ESPAsyncWebServer  // by me-no-dev:                    https://github.com/me-no-dev/ESPAsyncWebServer
 // # - ESPUI              // by s00500:                       https://github.com/s00500/ESPUI
 // # - ArduinoJson        // by bblanchon:                    https://github.com/bblanchon/ArduinoJson
+// # - LITTLEFS           // by lorol:                        https://github.com/lorol/LITTLEFS        
 // #
 // ###########################################################################################################################################
 #include <WiFi.h>               // Used to connect the ESP32 to your WiFi
@@ -53,7 +54,7 @@
 // ###########################################################################################################################################
 // # Version number of the code:
 // ###########################################################################################################################################
-const char* WORD_CLOCK_VERSION = "V1.0.3";
+const char* WORD_CLOCK_VERSION = "V1.0.3.1";
 
 
 // ###########################################################################################################################################
