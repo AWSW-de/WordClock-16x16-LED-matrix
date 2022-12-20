@@ -6,7 +6,7 @@
 // #
 // # Released under license: GNU General Public License v3.0: https://github.com/AWSW-de/WordClock-16x16-LED-matrix/blob/main/LICENSE
 // #
-// # Compatible with WordClock version: V1.0.4
+// # Compatible with WordClock version: V1.0.5
 // #
 // ###########################################################################################################################################
 /*
@@ -31,6 +31,13 @@
 #define NUMPIXELS 256          // How many NeoPixels are attached to the Arduino
 #define LEDintensityLIMIT 128  // Limit the intensity level to be able to select in the configuration to avoid to much power drain. !!! Make sure to use a propper power supply !!!
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUMPIXELS, LEDPIN, NEO_GRB + NEO_KHZ800);
+
+
+// ###########################################################################################################################################
+// # LED language layout default: !!! SET YOUR DEFAULT LANGUAGE HERE !!!
+// ###########################################################################################################################################
+int langLEDlayout_default = 0;  // LED language layout default (0 = DE; 1 = EN)
+// NOTE: You may need to use the "Reset WordClock settings"-button to update the value on the device
 
 
 // ###########################################################################################################################################
@@ -106,7 +113,7 @@ int ew12_default = 0;  // Extra Word 12
 int useledtest_default = 1;     // Show start animation and display test at boot
 int useshowip_default = 1;      // Show the current ip at boot
 int useTelegram_default = 0;    // Use Telegram support
-int useTelegramID_default = 1;  // React to your own Telegram CHAT_ID only
+int useTelegramID_default = 0;  // React to your own Telegram CHAT_ID only
 
 
 // ###########################################################################################################################################
@@ -126,13 +133,18 @@ const char* NTPserver = "pool.ntp.org";               // Time server address. Ch
 // ###########################################################################################################################################
 // # Telegram support:
 // ###########################################################################################################################################
+// Telegram emoticons used in the messages:           // Codes see here: https://apps.timwhitlock.info/emoji/tables/unicode
+String emoStartup = "\xF0\x9F\x98\x8A";
+String emoActive = "\xF0\x9F\x91\x8D";
+String emoInactive = "\xF0\x9F\x91\x8E";
+
 // Telegram new BOT creation:
 // 1.: In Telegram search user "BotFather" and use the "Start" button
 // 2.: Then type: "/newbot"
 // 3.: Set a name for the new bot when requested
 // 4.: Set a username for the new bot when requested
 // 5.: Check the "Done! Congratulations" message for the line after "Use this token to access the HTTP API:" and add this line to the setting above here:
-#define BOTtoken "XXXXXXXXXX:YYYYYYYYYYYYYYY-ZZZZZZZZZZZZZZZZZZZZ"
+#define BOTtoken "XXXXXXXXXX:YYYYYYYYYYYYYYY-ZZZZZZZZZZZZZZZZZZZZ" 
 // 6.: Leave the "BotFather" and search for your new bot name.
 // 7.: Select your new created bot and use the "/start" command or the "Start"-button to activate the bot
 // ###########################################################################################################################################
@@ -140,7 +152,7 @@ const char* NTPserver = "pool.ntp.org";               // Time server address. Ch
 // 9.: In Telegram search user "IDBot" and use the "Start" button
 // 10.: Then type: "/getid"
 // 11.: Copy your own Telegram ID and add this number to the setting above here:
-#define CHAT_ID "1234512345"
+#define CHAT_ID "1234512345" 
 // 12.: Use the button "Reset WordClock settings" in the web configuration to save these values into the connfiguration or add them in the web config manually.
 // 13.: Activate the Telegram support in the web config and restart the device
 // 14: Add this to the Telegram menu:
@@ -150,12 +162,12 @@ const char* NTPserver = "pool.ntp.org";               // Time server address. Ch
 // - Select your bot
 // - Select "Edit bot"
 // - Select "Edit Commands"
-// - Follow the instruction to set up the menu entries - example (send without the "/* DE:" and "*/"):
+// - Follow the instruction to set up the menu entries - example (send without the "/* DE:" and "*/" or "/* EN:" and "*/" ):
 
 /* DE:
 
 
-start - WordClock Telegram welcome test message
+start - WordClock Telegram welcome message
 ew1 - ALARM text
 ew2 - GEBURTSTAG text
 ew3 - MÜLL RAUS BRINGEN text
@@ -171,6 +183,25 @@ ew12 - TERMIN text
 
 
 */
+
+
+/* EN:
+
+
+start - WordClock Telegram welcome message
+ew1 - COME HERE text
+ew2 - LUNCH TIME text
+ew3 - ALARM text
+ew4 - GARBAGE text
+ew5 - HOLIDAY text
+ew6 - TEMPERATURE text
+ew7 - DATE text
+ew8 - BIRTHDAY text
+ew9 - DOORBELL text
+
+
+*/
+
 // ###########################################################################################################################################
 
 

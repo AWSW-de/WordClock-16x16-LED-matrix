@@ -59,7 +59,7 @@
 // ###########################################################################################################################################
 // # Version number of the code:
 // ###########################################################################################################################################
-const char* WORD_CLOCK_VERSION = "V1.0.4";
+const char* WORD_CLOCK_VERSION = "V1.0.5";
 
 
 // ###########################################################################################################################################
@@ -77,6 +77,7 @@ DNSServer dnsServer;
 // # Declartions and variables used in the functions:
 // ###########################################################################################################################################
 Preferences preferences;
+int langLEDlayout;
 int iHour = 0;
 int iMinute = 0;
 int iSecond = 0;
@@ -106,6 +107,7 @@ int useledtest, useshowip;
 int statusLabelID, statusNightModeID;
 int useTelegram, useTelegramID;
 uint16_t TelegramSwitcher, TelegramSwitcherID;
+char* selectLang;
 String chat_id = CHAT_ID;
 
 
@@ -146,8 +148,8 @@ void setup() {
   handleExtraWords();                                   // Start the extra words web access server
   secured_client.setCACert(TELEGRAM_CERTIFICATE_ROOT);  // Add root certificate for api.telegram.org
   if (useTelegram) {                                    // Telegram support
-    Serial.println("Send initial Telegram message: WordClock startup finished");
-    bot.sendMessage(CHAT_ID, "WordClock startup " + String(WORD_CLOCK_VERSION) + " finished", "");
+    Serial.println("Send initial Telegram message: WordClock " + String(WORD_CLOCK_VERSION) + " start finished");
+    bot.sendMessage(CHAT_ID, "WordClock " + String(WORD_CLOCK_VERSION) + " start finished " + emoStartup, "");
   }
   Serial.println("######################################################################");
   Serial.println("# WordClock startup finished...");
@@ -237,6 +239,11 @@ void setupWebInterface() {
   // Day mode stop time:
   ESPUI.number("Day time ends after", call_day_time_stop, ControlColor::Dark, day_time_stop, 12, 23);
 
+  // Set layout language:
+  if (langLEDlayout == 0) selectLang = "Current layout language: German";
+  if (langLEDlayout == 1) selectLang = "Current layout language: English";
+  ESPUI.button(selectLang, &buttonlangChange, ControlColor::Dark, "Change layout language", (void*)4);
+
 
 
   // Section Startup:
@@ -250,93 +257,174 @@ void setupWebInterface() {
   ESPUI.switcher("Show IP-address on startup", &switchShowIP, ControlColor::Dark, useshowip);
 
 
+
   // Section Extra Words:
   // ####################
   ESPUI.separator("Extra Words:");
 
-  // Color Extra Word ew1:
-  char hex_ew1[7] = { 0 };
-  sprintf(hex_ew1, "#%02X%02X%02X", redVal_ew1, greenVal_ew1, blueVal_ew1);
-  uint16_t text_colour_ew1;
-  text_colour_ew1 = ESPUI.text("ALARM", colCallew1, ControlColor::Dark, hex_ew1);
-  ESPUI.setInputType(text_colour_ew1, "color");
+  // ################################################################## DE:
+  if (langLEDlayout == 0) {  // DE:
+    // Color Extra Word ew1:
+    char hex_ew1[7] = { 0 };
+    sprintf(hex_ew1, "#%02X%02X%02X", redVal_ew1, greenVal_ew1, blueVal_ew1);
+    uint16_t text_colour_ew1;
+    text_colour_ew1 = ESPUI.text("ALARM", colCallew1, ControlColor::Dark, hex_ew1);
+    ESPUI.setInputType(text_colour_ew1, "color");
 
-  // Color Extra Word ew2:
-  char hex_ew2[7] = { 0 };
-  sprintf(hex_ew2, "#%02X%02X%02X", redVal_ew2, greenVal_ew2, blueVal_ew2);
-  uint16_t text_colour_ew2;
-  text_colour_ew2 = ESPUI.text("GEBURTSTAG", colCallew2, ControlColor::Dark, hex_ew2);
-  ESPUI.setInputType(text_colour_ew2, "color");
+    // Color Extra Word ew2:
+    char hex_ew2[7] = { 0 };
+    sprintf(hex_ew2, "#%02X%02X%02X", redVal_ew2, greenVal_ew2, blueVal_ew2);
+    uint16_t text_colour_ew2;
+    text_colour_ew2 = ESPUI.text("GEBURTSTAG", colCallew2, ControlColor::Dark, hex_ew2);
+    ESPUI.setInputType(text_colour_ew2, "color");
 
-  // Color Extra Word ew3:
-  char hex_ew3[7] = { 0 };
-  sprintf(hex_ew3, "#%02X%02X%02X", redVal_ew3, greenVal_ew3, blueVal_ew3);
-  uint16_t text_colour_ew3;
-  text_colour_ew3 = ESPUI.text("MÜLL RAUS BRINGEN", colCallew3, ControlColor::Dark, hex_ew3);
-  ESPUI.setInputType(text_colour_ew3, "color");
+    // Color Extra Word ew3:
+    char hex_ew3[7] = { 0 };
+    sprintf(hex_ew3, "#%02X%02X%02X", redVal_ew3, greenVal_ew3, blueVal_ew3);
+    uint16_t text_colour_ew3;
+    text_colour_ew3 = ESPUI.text("MÜLL RAUS BRINGEN", colCallew3, ControlColor::Dark, hex_ew3);
+    ESPUI.setInputType(text_colour_ew3, "color");
 
-  // Color Extra Word ew4:
-  char hex_ew4[7] = { 0 };
-  sprintf(hex_ew4, "#%02X%02X%02X", redVal_ew4, greenVal_ew4, blueVal_ew4);
-  uint16_t text_colour_ew4;
-  text_colour_ew4 = ESPUI.text("AUTO", colCallew4, ControlColor::Dark, hex_ew4);
-  ESPUI.setInputType(text_colour_ew4, "color");
+    // Color Extra Word ew4:
+    char hex_ew4[7] = { 0 };
+    sprintf(hex_ew4, "#%02X%02X%02X", redVal_ew4, greenVal_ew4, blueVal_ew4);
+    uint16_t text_colour_ew4;
+    text_colour_ew4 = ESPUI.text("AUTO", colCallew4, ControlColor::Dark, hex_ew4);
+    ESPUI.setInputType(text_colour_ew4, "color");
 
-  // Color Extra Word ew5:
-  char hex_ew5[7] = { 0 };
-  sprintf(hex_ew5, "#%02X%02X%02X", redVal_ew5, greenVal_ew5, blueVal_ew5);
-  uint16_t text_colour_ew5;
-  text_colour_ew5 = ESPUI.text("FEIERTAG", colCallew5, ControlColor::Dark, hex_ew5);
-  ESPUI.setInputType(text_colour_ew5, "color");
+    // Color Extra Word ew5:
+    char hex_ew5[7] = { 0 };
+    sprintf(hex_ew5, "#%02X%02X%02X", redVal_ew5, greenVal_ew5, blueVal_ew5);
+    uint16_t text_colour_ew5;
+    text_colour_ew5 = ESPUI.text("FEIERTAG", colCallew5, ControlColor::Dark, hex_ew5);
+    ESPUI.setInputType(text_colour_ew5, "color");
 
-  // Color Extra Word ew6:
-  char hex_ew6[7] = { 0 };
-  sprintf(hex_ew6, "#%02X%02X%02X", redVal_ew6, greenVal_ew6, blueVal_ew6);
-  uint16_t text_colour_ew6;
-  text_colour_ew6 = ESPUI.text("FORMEL1", colCallew6, ControlColor::Dark, hex_ew6);
-  ESPUI.setInputType(text_colour_ew6, "color");
+    // Color Extra Word ew6:
+    char hex_ew6[7] = { 0 };
+    sprintf(hex_ew6, "#%02X%02X%02X", redVal_ew6, greenVal_ew6, blueVal_ew6);
+    uint16_t text_colour_ew6;
+    text_colour_ew6 = ESPUI.text("FORMEL1", colCallew6, ControlColor::Dark, hex_ew6);
+    ESPUI.setInputType(text_colour_ew6, "color");
 
-  // Color Extra Word ew7:
-  char hex_ew7[7] = { 0 };
-  sprintf(hex_ew7, "#%02X%02X%02X", redVal_ew7, greenVal_ew7, blueVal_ew7);
-  uint16_t text_colour_ew7;
-  text_colour_ew7 = ESPUI.text("GELBER SACK", colCallew7, ControlColor::Dark, hex_ew7);
-  ESPUI.setInputType(text_colour_ew7, "color");
+    // Color Extra Word ew7:
+    char hex_ew7[7] = { 0 };
+    sprintf(hex_ew7, "#%02X%02X%02X", redVal_ew7, greenVal_ew7, blueVal_ew7);
+    uint16_t text_colour_ew7;
+    text_colour_ew7 = ESPUI.text("GELBER SACK", colCallew7, ControlColor::Dark, hex_ew7);
+    ESPUI.setInputType(text_colour_ew7, "color");
 
-  // Color Extra Word ew8:
-  char hex_ew8[7] = { 0 };
-  sprintf(hex_ew8, "#%02X%02X%02X", redVal_ew8, greenVal_ew8, blueVal_ew8);
-  uint16_t text_colour_ew8;
-  text_colour_ew8 = ESPUI.text("URLAUB", colCallew8, ControlColor::Dark, hex_ew8);
-  ESPUI.setInputType(text_colour_ew8, "color");
+    // Color Extra Word ew8:
+    char hex_ew8[7] = { 0 };
+    sprintf(hex_ew8, "#%02X%02X%02X", redVal_ew8, greenVal_ew8, blueVal_ew8);
+    uint16_t text_colour_ew8;
+    text_colour_ew8 = ESPUI.text("URLAUB", colCallew8, ControlColor::Dark, hex_ew8);
+    ESPUI.setInputType(text_colour_ew8, "color");
 
-  // Color Extra Word ew9:
-  char hex_ew9[7] = { 0 };
-  sprintf(hex_ew9, "#%02X%02X%02X", redVal_ew9, greenVal_ew9, blueVal_ew9);
-  uint16_t text_colour_ew9;
-  text_colour_ew9 = ESPUI.text("WERKSTATT", colCallew9, ControlColor::Dark, hex_ew9);
-  ESPUI.setInputType(text_colour_ew9, "color");
+    // Color Extra Word ew9:
+    char hex_ew9[7] = { 0 };
+    sprintf(hex_ew9, "#%02X%02X%02X", redVal_ew9, greenVal_ew9, blueVal_ew9);
+    uint16_t text_colour_ew9;
+    text_colour_ew9 = ESPUI.text("WERKSTATT", colCallew9, ControlColor::Dark, hex_ew9);
+    ESPUI.setInputType(text_colour_ew9, "color");
 
-  // Color Extra Word ew10:
-  char hex_ew10[7] = { 0 };
-  sprintf(hex_ew10, "#%02X%02X%02X", redVal_ew10, greenVal_ew10, blueVal_ew10);
-  uint16_t text_colour_ew10;
-  text_colour_ew10 = ESPUI.text("ZEIT ZUM ZOCKEN", colCallew10, ControlColor::Dark, hex_ew10);
-  ESPUI.setInputType(text_colour_ew10, "color");
+    // Color Extra Word ew10:
+    char hex_ew10[7] = { 0 };
+    sprintf(hex_ew10, "#%02X%02X%02X", redVal_ew10, greenVal_ew10, blueVal_ew10);
+    uint16_t text_colour_ew10;
+    text_colour_ew10 = ESPUI.text("ZEIT ZUM ZOCKEN", colCallew10, ControlColor::Dark, hex_ew10);
+    ESPUI.setInputType(text_colour_ew10, "color");
 
-  // Color Extra Word ew11:
-  char hex_ew11[7] = { 0 };
-  sprintf(hex_ew11, "#%02X%02X%02X", redVal_ew11, greenVal_ew11, blueVal_ew11);
-  uint16_t text_colour_ew11;
-  text_colour_ew11 = ESPUI.text("FRISEUR", colCallew11, ControlColor::Dark, hex_ew11);
-  ESPUI.setInputType(text_colour_ew11, "color");
+    // Color Extra Word ew11:
+    char hex_ew11[7] = { 0 };
+    sprintf(hex_ew11, "#%02X%02X%02X", redVal_ew11, greenVal_ew11, blueVal_ew11);
+    uint16_t text_colour_ew11;
+    text_colour_ew11 = ESPUI.text("FRISEUR", colCallew11, ControlColor::Dark, hex_ew11);
+    ESPUI.setInputType(text_colour_ew11, "color");
 
-  // Color Extra Word ew12:
-  char hex_ew12[7] = { 0 };
-  sprintf(hex_ew12, "#%02X%02X%02X", redVal_ew12, greenVal_ew12, blueVal_ew12);
-  uint16_t text_colour_ew12;
-  text_colour_ew12 = ESPUI.text("TERMIN", colCallew12, ControlColor::Dark, hex_ew12);
-  ESPUI.setInputType(text_colour_ew12, "color");
+    // Color Extra Word ew12:
+    char hex_ew12[7] = { 0 };
+    sprintf(hex_ew12, "#%02X%02X%02X", redVal_ew12, greenVal_ew12, blueVal_ew12);
+    uint16_t text_colour_ew12;
+    text_colour_ew12 = ESPUI.text("TERMIN", colCallew12, ControlColor::Dark, hex_ew12);
+    ESPUI.setInputType(text_colour_ew12, "color");
+  }
+
+  // ################################################################## EN:
+  if (langLEDlayout == 1) {  // EN:
+
+    // ew1 - COME HERE text
+    // ew2 - LUNCH TIME text
+    // ew3 - ALARM text
+    // ew4 - GARBAGE text
+    // ew5 - HOLIDAY text
+    // ew6 - TEMPERATURE text
+    // ew7 - DATE text
+    // ew8 - BIRTHDAY text
+    // ew9 - DOORBELL text
+
+    // Color Extra Word ew1:
+    char hex_ew1[7] = { 0 };
+    sprintf(hex_ew1, "#%02X%02X%02X", redVal_ew1, greenVal_ew1, blueVal_ew1);
+    uint16_t text_colour_ew1;
+    text_colour_ew1 = ESPUI.text("COME HERE", colCallew1, ControlColor::Dark, hex_ew1);
+    ESPUI.setInputType(text_colour_ew1, "color");
+
+    // Color Extra Word ew2:
+    char hex_ew2[7] = { 0 };
+    sprintf(hex_ew2, "#%02X%02X%02X", redVal_ew2, greenVal_ew2, blueVal_ew2);
+    uint16_t text_colour_ew2;
+    text_colour_ew2 = ESPUI.text("LUNCH TIME", colCallew2, ControlColor::Dark, hex_ew2);
+    ESPUI.setInputType(text_colour_ew2, "color");
+
+    // Color Extra Word ew3:
+    char hex_ew3[7] = { 0 };
+    sprintf(hex_ew3, "#%02X%02X%02X", redVal_ew3, greenVal_ew3, blueVal_ew3);
+    uint16_t text_colour_ew3;
+    text_colour_ew3 = ESPUI.text("ALARM", colCallew3, ControlColor::Dark, hex_ew3);
+    ESPUI.setInputType(text_colour_ew3, "color");
+
+    // Color Extra Word ew4:
+    char hex_ew4[7] = { 0 };
+    sprintf(hex_ew4, "#%02X%02X%02X", redVal_ew4, greenVal_ew4, blueVal_ew4);
+    uint16_t text_colour_ew4;
+    text_colour_ew4 = ESPUI.text("GARBAGE", colCallew4, ControlColor::Dark, hex_ew4);
+    ESPUI.setInputType(text_colour_ew4, "color");
+
+    // Color Extra Word ew5:
+    char hex_ew5[7] = { 0 };
+    sprintf(hex_ew5, "#%02X%02X%02X", redVal_ew5, greenVal_ew5, blueVal_ew5);
+    uint16_t text_colour_ew5;
+    text_colour_ew5 = ESPUI.text("HOLIDAY", colCallew5, ControlColor::Dark, hex_ew5);
+    ESPUI.setInputType(text_colour_ew5, "color");
+
+    // Color Extra Word ew6:
+    char hex_ew6[7] = { 0 };
+    sprintf(hex_ew6, "#%02X%02X%02X", redVal_ew6, greenVal_ew6, blueVal_ew6);
+    uint16_t text_colour_ew6;
+    text_colour_ew6 = ESPUI.text("TEMPERATURE", colCallew6, ControlColor::Dark, hex_ew6);
+    ESPUI.setInputType(text_colour_ew6, "color");
+
+    // Color Extra Word ew7:
+    char hex_ew7[7] = { 0 };
+    sprintf(hex_ew7, "#%02X%02X%02X", redVal_ew7, greenVal_ew7, blueVal_ew7);
+    uint16_t text_colour_ew7;
+    text_colour_ew7 = ESPUI.text("DATE", colCallew7, ControlColor::Dark, hex_ew7);
+    ESPUI.setInputType(text_colour_ew7, "color");
+
+    // Color Extra Word ew8:
+    char hex_ew8[7] = { 0 };
+    sprintf(hex_ew8, "#%02X%02X%02X", redVal_ew8, greenVal_ew8, blueVal_ew8);
+    uint16_t text_colour_ew8;
+    text_colour_ew8 = ESPUI.text("BIRTHDAY", colCallew8, ControlColor::Dark, hex_ew8);
+    ESPUI.setInputType(text_colour_ew8, "color");
+
+    // Color Extra Word ew9:
+    char hex_ew9[7] = { 0 };
+    sprintf(hex_ew9, "#%02X%02X%02X", redVal_ew9, greenVal_ew9, blueVal_ew9);
+    uint16_t text_colour_ew9;
+    text_colour_ew9 = ESPUI.text("DOORBELL", colCallew9, ControlColor::Dark, hex_ew9);
+    ESPUI.setInputType(text_colour_ew9, "color");
+  }
 
 
 
@@ -379,6 +467,11 @@ void setupWebInterface() {
   // Section Telegram:
   // #################
   ESPUI.separator("Telegram support:");
+
+  // Show note when Telegram was not configured yet:
+  if ((String(BOTtoken) == "XXXXXXXXXX:YYYYYYYYYYYYYYY-ZZZZZZZZZZZZZZZZZZZZ") || (String(CHAT_ID) == "1234512345")) {
+    ESPUI.label("Status:", ControlColor::Dark, "Telegram not configured yet. See intructions in settings.h");
+  }
 
   // Use Telegram support:
   TelegramSwitcher = ESPUI.switcher("Use Telegram support", &switchTelegram, ControlColor::Dark, useTelegram);
@@ -437,6 +530,7 @@ void setupWebInterface() {
 // # Read settings from flash:
 // ###########################################################################################################################################
 void getFlashValues() {
+  langLEDlayout = preferences.getUInt("langLEDlayout", langLEDlayout_default);
   redVal_time = preferences.getUInt("redVal_time", redVal_time_default);
   greenVal_time = preferences.getUInt("greenVal_time", greenVal_time_default);
   blueVal_time = preferences.getUInt("blueVal_time", blueVal_time_default);
@@ -517,8 +611,14 @@ void buttonWordClockReset(Control* sender, int type, void* param) {
       redVal_time = 255;
       greenVal_time = 0;
       blueVal_time = 0;
-      setLED(165, 172, 1);
-      setLED(144, 152, 1);
+      if (langLEDlayout == 0) {  // DE:
+        setLED(165, 172, 1);
+        setLED(144, 152, 1);
+      }
+      if (langLEDlayout == 1) {  // EN:
+        setLED(24, 28, 1);
+        setLED(131, 139, 1);
+      }
       strip.show();
       delay(1000);
       break;
@@ -527,6 +627,7 @@ void buttonWordClockReset(Control* sender, int type, void* param) {
         Serial.println("Status: WORDCLOCK SETTINGS RESET REQUEST EXECUTED");
         preferences.clear();
         delay(1000);
+        preferences.putUInt("langLEDlayout", langLEDlayout_default);
         preferences.putUInt("redVal_time", redVal_time_default);
         preferences.putUInt("greenVal_time", greenVal_time_default);
         preferences.putUInt("blueVal_time", blueVal_time_default);
@@ -596,8 +697,14 @@ void buttonWordClockReset(Control* sender, int type, void* param) {
         redVal_time = 0;
         greenVal_time = 255;
         blueVal_time = 0;
-        setLED(165, 172, 1);
-        setLED(144, 152, 1);
+        if (langLEDlayout == 0) {  // DE:
+          setLED(165, 172, 1);
+          setLED(144, 152, 1);
+        }
+        if (langLEDlayout == 1) {  // EN:
+          setLED(131, 139, 1);
+          setLED(24, 28, 1);
+        }
         strip.show();
         delay(1000);
         Serial.println("####################################################################################################");
@@ -609,6 +716,66 @@ void buttonWordClockReset(Control* sender, int type, void* param) {
         Serial.println("Status: WORDCLOCK SETTINGS RESET REQUEST");
         ESPUI.updateButton(sender->id, "! Press button once more to apply settings reset !");
         WordClockResetCounter = WordClockResetCounter + 1;
+      }
+      break;
+  }
+}
+
+
+// ###########################################################################################################################################
+// # GUI: Change LED layout language:
+// ###########################################################################################################################################
+int langChangeCounter = 0;
+void buttonlangChange(Control* sender, int type, void* param) {
+  updatedevice = false;
+  Serial.println(String("param: ") + String(int(param)));
+  switch (type) {
+    case B_DOWN:
+      ESPUI.print(statusLabelID, "WORDCLOCK LAYOUT LANGUAGE CHANGE REQUESTED");
+      back_color();
+      redVal_time = 255;
+      greenVal_time = 0;
+      blueVal_time = 0;
+      if (langLEDlayout == 0) {  // DE: NEUSTART
+        setLED(165, 172, 1);
+      }
+      if (langLEDlayout == 1) {  // EN: RESET
+        setLED(24, 28, 1);
+      }
+      strip.show();
+      delay(1000);
+      break;
+    case B_UP:
+      if (langChangeCounter == 1) {
+        Serial.println("WORDCLOCK LAYOUT LANGUAGE CHANGE EXECUTED");
+        if (langLEDlayout == 0) {  // Flip langLEDlayout setting DE to EN / EN to DE
+          preferences.putUInt("langLEDlayout", 1);
+        } else {
+          preferences.putUInt("langLEDlayout", 0);
+        }
+        delay(1000);
+        preferences.end();
+        back_color();
+        redVal_time = 0;
+        greenVal_time = 255;
+        blueVal_time = 0;
+        if (langLEDlayout == 0) {  // DE: NEUSTART
+          setLED(165, 172, 1);
+        }
+        if (langLEDlayout == 1) {  // EN: RESET
+          setLED(24, 28, 1);
+        }
+        strip.show();
+        delay(1000);
+        Serial.println("##########################################################################");
+        Serial.println("# WORDCLOCK LAYOUT LANGUAGE WAS CHANGED... WORDCLOCK WILL NOW RESTART... #");
+        Serial.println("##########################################################################");
+        delay(1000);
+        ESP.restart();
+      } else {
+        Serial.println("WORDCLOCK LAYOUT LANGUAGE CHANGE REQUESTED");
+        ESPUI.updateButton(sender->id, "! Press button once more to apply the language change and restart !");
+        langChangeCounter = langChangeCounter + 1;
       }
       break;
   }
@@ -1145,7 +1312,12 @@ void buttonRestart(Control* sender, int type, void* param) {
       redVal_time = 255;
       greenVal_time = 0;
       blueVal_time = 0;
-      setLED(165, 172, 1);
+      if (langLEDlayout == 0) {  // DE:
+        setLED(165, 172, 1);
+      }
+      if (langLEDlayout == 1) {  // EN:
+        setLED(120, 126, 1);
+      }
       strip.show();
       break;
     case B_UP:
@@ -1154,7 +1326,12 @@ void buttonRestart(Control* sender, int type, void* param) {
         redVal_time = 0;
         greenVal_time = 255;
         blueVal_time = 0;
-        setLED(165, 172, 1);
+        if (langLEDlayout == 0) {  // DE:
+          setLED(165, 172, 1);
+        }
+        if (langLEDlayout == 1) {  // EN:
+          setLED(120, 126, 1);
+        }
         strip.show();
         Serial.println("Status: Restart executed");
         delay(1000);
@@ -1183,7 +1360,12 @@ void buttonWiFiReset(Control* sender, int type, void* param) {
         redVal_time = 255;
         greenVal_time = 0;
         blueVal_time = 0;
-        setLED(165, 172, 1);
+        if (langLEDlayout == 0) {  // DE:
+          setLED(165, 172, 1);
+        }
+        if (langLEDlayout == 1) {  // EN:
+          setLED(24, 28, 1);
+        }
         SetWLAN(strip.Color(255, 0, 0));
         ESPUI.print(statusLabelID, "WIFI SETTINGS RESET REQUESTED");
         delay(1000);
@@ -1235,7 +1417,12 @@ void buttonUpdate(Control* sender, int type, void* param) {
       redVal_time = 0;
       greenVal_time = 0;
       blueVal_time = 255;
-      setLED(52, 57, 1);
+      if (langLEDlayout == 0) {  // DE:
+        setLED(52, 57, 1);
+      }
+      if (langLEDlayout == 1) {  // EN:
+        setLED(48, 53, 1);
+      }
       strip.show();
       break;
     case B_UP:
@@ -1344,7 +1531,12 @@ void switchTelegram(Control* sender, int value) {
         redVal_time = 255;
         greenVal_time = 0;
         blueVal_time = 0;
-        setLED(165, 172, 1);
+        if (langLEDlayout == 0) {  // DE:
+          setLED(165, 172, 1);
+        }
+        if (langLEDlayout == 1) {  // EN:
+          setLED(120, 126, 1);
+        }
         strip.show();
       }
       break;
@@ -1360,7 +1552,12 @@ void switchTelegram(Control* sender, int value) {
       redVal_time = 255;
       greenVal_time = 0;
       blueVal_time = 0;
-      setLED(165, 172, 1);
+      if (langLEDlayout == 0) {  // DE:
+        setLED(165, 172, 1);
+      }
+      if (langLEDlayout == 1) {  // EN:
+        setLED(120, 126, 1);
+      }
       strip.show();
       break;
   }
@@ -1435,6 +1632,12 @@ void show_time(int hours, int minutes) {
   // Display time:
   iHour = hours;
   iMinute = minutes;
+
+  // Test a special time:
+  // iHour = 23;
+  // iMinute = 35;
+
+  // Test the complete day time texts:
   if (testTime == 1) {
     Serial.print(iHour);
     Serial.print(":");
@@ -1446,106 +1649,214 @@ void show_time(int hours, int minutes) {
   showMinutes(iMinute);
 
 
-  // FÜNF: (Minuten)
-  if ((minDiv == 1) || (minDiv == 5) || (minDiv == 7) || (minDiv == 11)) setLED(140, 143, 1);
-  // VIERTEL:
-  if ((minDiv == 3) || (minDiv == 9)) setLED(153, 159, 1);
-  // ZEHN: (Minuten)
-  if ((minDiv == 2) || (minDiv == 10)) setLED(112, 115, 1);
-  // ZWANZIG:
-  if ((minDiv == 4) || (minDiv == 8)) setLED(88, 94, 1);
-  // NACH:
-  if ((minDiv == 1) || (minDiv == 2) || (minDiv == 3) || (minDiv == 4) || (minDiv == 7)) setLED(176, 179, 1);
-  // VOR:
-  if ((minDiv == 5) || (minDiv == 8) || (minDiv == 9) || (minDiv == 10) || (minDiv == 11)) setLED(173, 175, 1);
-  // HALB:
-  if ((minDiv == 5) || (minDiv == 6) || (minDiv == 7)) setLED(181, 184, 1);
+  // ########################################################### DE:
+  if (langLEDlayout == 0) {  // DE:
+
+    // ES IST:
+    setLED(62, 63, 1);
+    setLED(70, 72, 1);
+
+    // FÜNF: (Minuten)
+    if ((minDiv == 1) || (minDiv == 5) || (minDiv == 7) || (minDiv == 11)) setLED(140, 143, 1);
+    // VIERTEL:
+    if ((minDiv == 3) || (minDiv == 9)) setLED(153, 159, 1);
+    // ZEHN: (Minuten)
+    if ((minDiv == 2) || (minDiv == 10)) setLED(112, 115, 1);
+    // ZWANZIG:
+    if ((minDiv == 4) || (minDiv == 8)) setLED(88, 94, 1);
+    // NACH:
+    if ((minDiv == 1) || (minDiv == 2) || (minDiv == 3) || (minDiv == 4) || (minDiv == 7)) setLED(176, 179, 1);
+    // VOR:
+    if ((minDiv == 5) || (minDiv == 8) || (minDiv == 9) || (minDiv == 10) || (minDiv == 11)) setLED(173, 175, 1);
+    // HALB:
+    if ((minDiv == 5) || (minDiv == 6) || (minDiv == 7)) setLED(181, 184, 1);
 
 
-  //set hour from 1 to 12 (at noon, or midnight)
-  int xHour = (iHour % 12);
-  if (xHour == 0)
-    xHour = 12;
-  // at minute 25 hour needs to be counted up:
-  // fuenf vor halb 2 = 13:25
-  if (iMinute >= 25) {
-    if (xHour == 12)
-      xHour = 1;
-    else
-      xHour++;
+    //set hour from 1 to 12 (at noon, or midnight)
+    int xHour = (iHour % 12);
+    if (xHour == 0)
+      xHour = 12;
+    // at minute 25 hour needs to be counted up:
+    // fuenf vor halb 2 = 13:25
+    if (iMinute >= 25) {
+      if (xHour == 12)
+        xHour = 1;
+      else
+        xHour++;
+    }
+
+
+    switch (xHour) {
+      case 1:
+        {
+          if (xHour == 1) setLED(208, 210, 1);                     // EIN
+          if ((xHour == 1) && (iMinute > 4)) setLED(208, 211, 1);  // EINS (S in EINS) (just used if not point 1 o'clock)
+          break;
+        }
+      case 2:
+        {
+          setLED(220, 223, 1);  // ZWEI
+          break;
+        }
+      case 3:
+        {
+          setLED(212, 215, 1);  // DREI
+          break;
+        }
+      case 4:
+        {
+          setLED(216, 219, 1);  // VIER
+          break;
+        }
+      case 5:
+        {
+          setLED(228, 231, 1);  // FUENF
+          break;
+        }
+      case 6:
+        {
+          setLED(203, 207, 1);  // SECHS
+          break;
+        }
+      case 7:
+        {
+          setLED(186, 191, 1);  // SIEBEN
+          break;
+        }
+      case 8:
+        {
+          setLED(236, 239, 1);  // ACHT
+          break;
+        }
+      case 9:
+        {
+          setLED(199, 202, 1);  // NEUN
+          break;
+        }
+      case 10:
+        {
+          setLED(198, 195, 1);  // ZEHN (Stunden)
+          break;
+        }
+      case 11:
+        {
+          setLED(192, 194, 1);  // ELF
+          break;
+        }
+      case 12:
+        {
+          setLED(231, 235, 1);  // ZWÖLF
+          break;
+        }
+    }
+
+    if (iMinute < 5) setLED(224, 226, 1);  // UHR
   }
 
 
-  // ES IST:
-  setLED(62, 63, 1);
-  setLED(70, 72, 1);
+  // ########################################################### EN:
+  if (langLEDlayout == 1) {  // EN:
+
+    // IT IS:
+    setLED(14, 15, 1);
+    setLED(45, 46, 1);
+
+    // FIVE: (Minutes)                         // x:05 + x:25 + x:35 + x:55
+    if ((minDiv == 1) || (minDiv == 5) || (minDiv == 7) || (minDiv == 11)) setLED(140, 143, 1);
+    // QUARTER:                                // x:15 + X:45
+    if ((minDiv == 3) || (minDiv == 9)) setLED(104, 110, 1);
+    // TEN: (Minutes)                          // x:10 + x:50
+    if ((minDiv == 2) || (minDiv == 10)) setLED(101, 103, 1);
+    // TWENTY:                                 // x:20 + x:25 + x:35 + x:40
+    if ((minDiv == 4) || (minDiv == 5) || (minDiv == 7) || (minDiv == 8)) setLED(58, 63, 1);
+    // PAST:                                   // x:05 + x:10 + x:15 + x:20 + x:25 + x:30
+    if ((minDiv == 1) || (minDiv == 2) || (minDiv == 3) || (minDiv == 4) || (minDiv == 5) || (minDiv == 6)) setLED(144, 147, 1);
+    // TO:                                     // x:35 + x:40 + x:45 + x:50 + x:55
+    if ((minDiv == 7) || (minDiv == 8) || (minDiv == 9) || (minDiv == 10) || (minDiv == 11)) setLED(129, 130, 1);
+    // HALF:                                   // x:30
+    if ((minDiv == 6)) setLED(54, 57, 1);
 
 
-  switch (xHour) {
-    case 1:
-      {
-        if (xHour == 1) setLED(208, 210, 1);                     // EIN
-        if ((xHour == 1) && (iMinute > 4)) setLED(208, 211, 1);  // EINS (S in EINS) (just used if not point 1 o'clock)
-        break;
-      }
-    case 2:
-      {
-        setLED(220, 223, 1);  // ZWEI
-        break;
-      }
-    case 3:
-      {
-        setLED(212, 215, 1);  // DREI
-        break;
-      }
-    case 4:
-      {
-        setLED(216, 219, 1);  // VIER
-        break;
-      }
-    case 5:
-      {
-        setLED(228, 231, 1);  // FUENF
-        break;
-      }
-    case 6:
-      {
-        setLED(203, 207, 1);  // SECHS
-        break;
-      }
-    case 7:
-      {
-        setLED(186, 191, 1);  // SIEBEN
-        break;
-      }
-    case 8:
-      {
-        setLED(236, 239, 1);  // ACHT
-        break;
-      }
-    case 9:
-      {
-        setLED(199, 202, 1);  // NEUN
-        break;
-      }
-    case 10:
-      {
-        setLED(198, 195, 1);  // ZEHN (Stunden)
-        break;
-      }
-    case 11:
-      {
-        setLED(192, 194, 1);  // ELF
-        break;
-      }
-    case 12:
-      {
-        setLED(231, 235, 1);  // ZWÖLF
-        break;
-      }
+    //set hour from 1 to 12 (at noon, or midnight)
+    int xHour = (iHour % 12);
+    if (xHour == 0)
+      xHour = 12;
+    // at minute 35 hour needs to be counted up:
+    // Twenty five to two = 13:35
+    if (iMinute >= 35) {
+      if (xHour == 12)
+        xHour = 1;
+      else
+        xHour++;
+    }
+
+
+    switch (xHour) {
+      case 1:
+        {
+          if (xHour == 1) setLED(208, 210, 1);  // ONE
+          break;
+        }
+      case 2:
+        {
+          setLED(160, 162, 1);  // TWO
+          break;
+        }
+      case 3:
+        {
+          setLED(196, 200, 1);  // THREE
+          break;
+        }
+      case 4:
+        {
+          setLED(156, 159, 1);  // FOUR
+          break;
+        }
+      case 5:
+        {
+          setLED(188, 191, 1);  // FIVE
+          break;
+        }
+      case 6:
+        {
+          setLED(192, 194, 1);  // SIX
+          break;
+        }
+      case 7:
+        {
+          setLED(202, 206, 1);  // SEVEN
+          break;
+        }
+      case 8:
+        {
+          setLED(162, 166, 1);  // EIGHT
+          break;
+        }
+      case 9:
+        {
+          setLED(184, 187, 1);  // NINE
+          break;
+        }
+      case 10:
+        {
+          setLED(173, 175, 1);  // TEN
+          break;
+        }
+      case 11:
+        {
+          setLED(167, 172, 1);  // ELEVEN
+          break;
+        }
+      case 12:
+        {
+          setLED(177, 182, 1);  // TWELVE
+          break;
+        }
+    }
+
+    if (iMinute < 5) setLED(212, 218, 1);  // O'CLOCK
   }
 
-  if (iMinute < 5) setLED(224, 226, 1);  // UHR
 
   // Handle extra words:
   set_extra_words();
@@ -1560,35 +1871,76 @@ void show_time(int hours, int minutes) {
 void showMinutes(int minutes) {
   int minMod = (minutes % 5);
   // Serial.println(minMod);
-  switch (minMod) {
-    case 1:
-      {
-        setLED(241, 241, 1);  // +
-        setLED(242, 242, 1);  // 1
-        setLED(248, 253, 1);  // MINUTE
-        break;
-      }
-    case 2:
-      {
-        setLED(241, 241, 1);  // +
-        setLED(243, 243, 1);  // 2
-        setLED(248, 254, 1);  // MINUTEN
-        break;
-      }
-    case 3:
-      {
-        setLED(241, 241, 1);  // +
-        setLED(244, 244, 1);  // 3
-        setLED(248, 254, 1);  // MINUTEN
-        break;
-      }
-    case 4:
-      {
-        setLED(241, 241, 1);  // +
-        setLED(245, 245, 1);  // 3
-        setLED(248, 254, 1);  // MINUTEN
-        break;
-      }
+
+  // ##################################################### DE:
+
+  if (langLEDlayout == 0) {  // DE:
+
+    switch (minMod) {
+      case 1:
+        {
+          setLED(241, 241, 1);  // +
+          setLED(242, 242, 1);  // 1
+          setLED(248, 253, 1);  // MINUTE
+          break;
+        }
+      case 2:
+        {
+          setLED(241, 241, 1);  // +
+          setLED(243, 243, 1);  // 2
+          setLED(248, 254, 1);  // MINUTEN
+          break;
+        }
+      case 3:
+        {
+          setLED(241, 241, 1);  // +
+          setLED(244, 244, 1);  // 3
+          setLED(248, 254, 1);  // MINUTEN
+          break;
+        }
+      case 4:
+        {
+          setLED(241, 241, 1);  // +
+          setLED(245, 245, 1);  // 3
+          setLED(248, 254, 1);  // MINUTEN
+          break;
+        }
+    }
+  }
+
+  // ##################################################### EN:
+
+  if (langLEDlayout == 1) {  // EN:
+    switch (minMod) {
+      case 1:
+        {
+          setLED(241, 241, 1);  // +
+          setLED(243, 243, 1);  // 1
+          setLED(248, 253, 1);  // MINUTE
+          break;
+        }
+      case 2:
+        {
+          setLED(241, 241, 1);  // +
+          setLED(244, 244, 1);  // 2
+          setLED(248, 254, 1);  // MINUTEN
+          break;
+        }
+      case 3:
+        {
+          setLED(241, 241, 1);  // +
+          setLED(245, 245, 1);  // 3
+          setLED(248, 254, 1);  // MINUTEN
+          break;
+        }
+      case 4:
+        {
+          setLED(241, 241, 1);  // +
+          setLED(246, 246, 1);  // 3
+          setLED(248, 254, 1);  // MINUTEN
+          break;
+        }
+    }
   }
 }
 
@@ -1598,14 +1950,28 @@ void showMinutes(int minutes) {
 // ###########################################################################################################################################
 void startup() {
   back_color();  // Set background color
+
   // Display AWSW WORDCLOCK text:
   uint32_t c1 = strip.Color(redVal_time, greenVal_time, blueVal_time);
-  strip.setPixelColor(0, c1);
-  strip.setPixelColor(15, c1);
-  strip.setPixelColor(240, c1);
-  strip.setPixelColor(255, c1);
-  for (uint16_t i = 144; i < 153; i++) {
-    strip.setPixelColor(i, c1);
+
+  if (langLEDlayout == 0) {  // DE:
+    strip.setPixelColor(0, c1);
+    strip.setPixelColor(15, c1);
+    strip.setPixelColor(240, c1);
+    strip.setPixelColor(255, c1);
+    for (uint16_t i = 144; i < 153; i++) {
+      strip.setPixelColor(i, c1);
+    }
+  }
+
+  if (langLEDlayout == 1) {  // EN:
+    strip.setPixelColor(80, c1);
+    strip.setPixelColor(81, c1);
+    strip.setPixelColor(82, c1);
+    strip.setPixelColor(83, c1);
+    for (uint16_t i = 131; i < 140; i++) {
+      strip.setPixelColor(i, c1);
+    }
   }
   strip.show();
 }
@@ -1628,17 +1994,35 @@ void back_color() {
 // LED test --> no blank display if WiFi was not set yet:
 void DisplayTest() {
   if (useledtest) {
+    Serial.print("langLEDlayout: ");
+    Serial.println(langLEDlayout);
+
     Serial.println("Display test...");
     uint32_t c1 = strip.Color(redVal_time, greenVal_time, blueVal_time);
     uint32_t c2 = strip.Color(redVal_back, greenVal_back, blueVal_back);
-    for (int i = 0; i < NUMPIXELS; i++) {
-      strip.setPixelColor(i, c2);
-      if (i >= 144) {
-        for (uint16_t i = 144; i < 153; i++) {
-          strip.setPixelColor(i, c1);
+
+    if (langLEDlayout == 0) {  // DE: WordClock
+      for (int i = 0; i < NUMPIXELS; i++) {
+        strip.setPixelColor(i, c2);
+        if (i >= 144) {  // WordClock
+          for (uint16_t i = 144; i < 153; i++) {
+            strip.setPixelColor(i, c1);
+          }
         }
+        strip.show();
       }
-      strip.show();
+    }
+
+    if (langLEDlayout == 1) {  // EN:
+      for (int i = 0; i < NUMPIXELS; i++) {
+        strip.setPixelColor(i, c2);
+        if (i >= 131) {  // WordClock
+          for (uint16_t i = 131; i < 140; i++) {
+            strip.setPixelColor(i, c1);
+          }
+        }
+        strip.show();
+      }
     }
   }
 }
@@ -1649,8 +2033,17 @@ void DisplayTest() {
 // ###########################################################################################################################################
 void SetWLAN(uint32_t color) {
   Serial.println("Show text WLAN...");
-  for (uint16_t i = 48; i < 52; i++) {
-    strip.setPixelColor(i, color);
+
+  if (langLEDlayout == 0) {  // DE:
+    for (uint16_t i = 48; i < 52; i++) {
+      strip.setPixelColor(i, color);
+    }
+  }
+
+  if (langLEDlayout == 1) {  // EN:
+    for (uint16_t i = 230; i < 234; i++) {
+      strip.setPixelColor(i, color);
+    }
   }
   strip.show();
 }
@@ -1671,8 +2064,15 @@ void WIFI_login() {
     Serial.print("Failed to connect to WiFi: ");
     Serial.println(WiFi.SSID());
     SetWLAN(strip.Color(255, 0, 0));
-    for (uint16_t i = 246; i < 248; i++) {
-      strip.setPixelColor(i, strip.Color(255, 0, 0));
+    if (langLEDlayout == 0) {  // DE:
+      for (uint16_t i = 246; i < 248; i++) {
+        strip.setPixelColor(i, strip.Color(255, 0, 0));
+      }
+    }
+    if (langLEDlayout == 1) {  // EN:
+      for (uint16_t i = 227; i < 229; i++) {
+        strip.setPixelColor(i, strip.Color(255, 0, 0));
+      }
     }
     strip.show();
     delay(500);
@@ -1680,11 +2080,18 @@ void WIFI_login() {
     Serial.print("Connected to WiFi: ");
     Serial.println(WiFi.SSID());
     SetWLAN(strip.Color(0, 255, 0));
-    for (uint16_t i = 246; i < 248; i++) {
-      strip.setPixelColor(i, strip.Color(0, 255, 0));
+    if (langLEDlayout == 0) {  // DE:
+      for (uint16_t i = 246; i < 248; i++) {
+        strip.setPixelColor(i, strip.Color(0, 255, 0));
+      }
+    }
+    if (langLEDlayout == 1) {  // EN:
+      for (uint16_t i = 227; i < 229; i++) {
+        strip.setPixelColor(i, strip.Color(0, 255, 0));
+      }
     }
     strip.show();
-    delay(500);
+    delay(1000);
   }
 }
 
@@ -1703,7 +2110,12 @@ void WiFiManager1stBootFix() {
     redVal_time = 0;
     greenVal_time = 255;
     blueVal_time = 0;
-    setLED(165, 172, 1);
+    if (langLEDlayout == 0) {  // DE:
+      setLED(165, 172, 1);
+    }
+    if (langLEDlayout == 1) {  // EN:
+      setLED(120, 126, 1);
+    }
     strip.show();
     delay(1000);
     preferences.putUInt("WiFiManFix", 1);
@@ -1755,14 +2167,24 @@ void initTime(String timezone) {
   Serial.println("Setting up time");
   configTime(0, 0, NTPserver);
   if (!getLocalTime(&timeinfo)) {
+    back_color();
     Serial.println("Failed to obtain time");
     ESPUI.print(currentTimeID, "Failed to obtain time");
     ESPUI.print(statusLabelID, "Failed to obtain time");
-    for (uint16_t i = 84; i < 88; i++) {
-      strip.setPixelColor(i, strip.Color(255, 0, 0));
+    redVal_time = 255;
+    greenVal_time = 0;
+    blueVal_time = 0;
+    if (langLEDlayout == 0) {  // DE:
+      setLED(84, 87, 1);
+      setLED(165, 172, 1);
+    }
+    if (langLEDlayout == 1) {  // EN:
+      setLED(28, 31, 1);
+      setLED(120, 126, 1);
     }
     strip.show();
-    delay(1000);
+    delay(5000);
+    ESP.restart();
     return;
   }
   Serial.println("Got the time from NTP");
@@ -2221,9 +2643,9 @@ void handleNewMessages(int numNewMessages) {
     // You will be motified in case an unknown sender id tries to control the WordClock
     if (useTelegramID == 1) {
       if (String(CHAT_ID) != chat_id) {
-        // if (String("123") != chat_id) { // TEST WITH UNKNOWN ID
+        // if (String("123") != chat_id) { // TEST WITH UNKNOWN OWN FAKE ID 123
         Serial.println(String("Message received from UNKNOWN Telegram user: " + chat_id + " ==> WordClock will NOT react to this message"));
-        bot.sendMessage(CHAT_ID, "Message received from UNKNOWN Telegram user: " + chat_id + " ==> WordClock will NOT react to this message");
+        bot.sendMessage(CHAT_ID, "Message received from UNKNOWN Telegram user: " + chat_id + " ==> WordClock will NOT react to this message " + "\xE2\x9D\x97");
         break;
       } else {
         // Serial.println(String("Message received from known Telegram user ==> WordClock will react to this message"));
@@ -2235,155 +2657,278 @@ void handleNewMessages(int numNewMessages) {
     String from_name = bot.messages[i].from_name;
     if (from_name == "") from_name = "Guest";
 
+    // ################################################################## DE:
+    if (langLEDlayout == 0) {  // DE:
 
-    if (text == "/ew1") {
-      if (ew1 == 0) {
-        ew1 = 1;
-        bot.sendMessage(chat_id, "ALARM text set active");
-      } else {
-        ew1 = 0;
-        bot.sendMessage(chat_id, "ALARM text set inactive");
+      if (text == "/ew1") {
+        if (ew1 == 0) {
+          ew1 = 1;
+          bot.sendMessage(chat_id, "ALARM text set active " + emoActive);
+        } else {
+          ew1 = 0;
+          bot.sendMessage(chat_id, "ALARM text set inactive " + emoInactive);
+        }
+        preferences.putUInt("ew1", ew1);
+        update_display();
       }
-      preferences.putUInt("ew1", ew1);
-      update_display();
+
+      if (text == "/ew2") {
+        if (ew2 == 0) {
+          ew2 = 1;
+          bot.sendMessage(chat_id, "GEBURTSTAG text set active " + emoActive);
+        } else {
+          ew2 = 0;
+          bot.sendMessage(chat_id, "GEBURTSTAG text set inactive " + emoInactive);
+        }
+        preferences.putUInt("ew2", ew2);
+        update_display();
+      }
+
+      if (text == "/ew3") {
+        if (ew3 == 0) {
+          ew3 = 1;
+          bot.sendMessage(chat_id, "MÜLL RAUS BRINGEN text set active " + emoActive);
+        } else {
+          ew3 = 0;
+          bot.sendMessage(chat_id, "MÜLL RAUS BRINGEN text set inactive " + emoInactive);
+        }
+        preferences.putUInt("ew3", ew3);
+        update_display();
+      }
+
+      if (text == "/ew4") {
+        if (ew4 == 0) {
+          ew4 = 1;
+          bot.sendMessage(chat_id, "AUTO text set active " + emoActive);
+        } else {
+          ew4 = 0;
+          bot.sendMessage(chat_id, "AUTO text set inactive " + emoInactive);
+        }
+        preferences.putUInt("ew4", ew4);
+        update_display();
+      }
+
+      if (text == "/ew5") {
+        if (ew5 == 0) {
+          ew5 = 1;
+          bot.sendMessage(chat_id, "FEIERTAG text set active " + emoActive);
+        } else {
+          ew5 = 0;
+          bot.sendMessage(chat_id, "FEIERTAG text set inactive " + emoInactive);
+        }
+        preferences.putUInt("ew5", ew5);
+        update_display();
+      }
+
+      if (text == "/ew6") {
+        if (ew6 == 0) {
+          ew6 = 1;
+          bot.sendMessage(chat_id, "FORMEL1 text set active " + emoActive);
+        } else {
+          ew6 = 0;
+          bot.sendMessage(chat_id, "FORMEL1 text set inactive " + emoInactive);
+        }
+        preferences.putUInt("ew6", ew6);
+        update_display();
+      }
+
+      if (text == "/ew7") {
+        if (ew7 == 0) {
+          ew7 = 1;
+          bot.sendMessage(chat_id, "GELBER SACK text set active " + emoActive);
+        } else {
+          ew7 = 0;
+          bot.sendMessage(chat_id, "GELBER SACK text set inactive " + emoInactive);
+        }
+        preferences.putUInt("ew7", ew7);
+        update_display();
+      }
+
+      if (text == "/ew8") {
+        if (ew8 == 0) {
+          ew8 = 1;
+          bot.sendMessage(chat_id, "URLAUB text set active " + emoActive);
+        } else {
+          ew8 = 0;
+          bot.sendMessage(chat_id, "URLAUB text set inactive " + emoInactive);
+        }
+        preferences.putUInt("ew8", ew8);
+        update_display();
+      }
+
+      if (text == "/ew9") {
+        if (ew9 == 0) {
+          ew9 = 1;
+          bot.sendMessage(chat_id, "WERKSTATT text set active " + emoActive);
+        } else {
+          ew9 = 0;
+          bot.sendMessage(chat_id, "WERKSTATT text set inactive " + emoInactive);
+        }
+        preferences.putUInt("ew9", ew9);
+        update_display();
+      }
+
+      if (text == "/ew10") {
+        if (ew10 == 0) {
+          ew10 = 1;
+          bot.sendMessage(chat_id, "ZEIT ZUM ZOCKEN text set active " + emoActive);
+        } else {
+          ew10 = 0;
+          bot.sendMessage(chat_id, "ZEIT ZUM ZOCKEN text set inactive " + emoInactive);
+        }
+        preferences.putUInt("ew10", ew10);
+        update_display();
+      }
+
+      if (text == "/ew11") {
+        if (ew11 == 0) {
+          ew11 = 1;
+          bot.sendMessage(chat_id, "FRISEUR text set active " + emoActive);
+        } else {
+          ew11 = 0;
+          bot.sendMessage(chat_id, "FRISEUR text set inactive " + emoInactive);
+        }
+        preferences.putUInt("ew11", ew11);
+        update_display();
+      }
+
+      if (text == "/ew12") {
+        if (ew12 == 0) {
+          ew12 = 1;
+          bot.sendMessage(chat_id, "TERMIN text set active " + emoActive);
+        } else {
+          ew12 = 0;
+          bot.sendMessage(chat_id, "TERMIN text set inactive " + emoInactive);
+        }
+        preferences.putUInt("ew12", ew12);
+        update_display();
+      }
+
+      if (text == "/start") {
+        String welcome = "Welcome to WordClock Telegram bot, " + from_name + ". " + "\xF0\x9F\x98\x8A" + "\n";
+        welcome += "This is a WordClock chat action test message.\n\n";
+        welcome += "Use /ew1, /ew2, /ew3, /ew4, /ew5, /ew6, /ew7, /ew8, /ew9, /ew10, /ew11, /ew12 or the menu to set the extra words.\n\n";
+        bot.sendMessage(chat_id, welcome);
+      }
     }
 
-    if (text == "/ew2") {
-      if (ew2 == 0) {
-        ew2 = 1;
-        bot.sendMessage(chat_id, "GEBURTSTAG text set active");
-      } else {
-        ew2 = 0;
-        bot.sendMessage(chat_id, "GEBURTSTAG text set inactive");
-      }
-      preferences.putUInt("ew2", ew2);
-      update_display();
-    }
+    // ################################################################## EN:
 
-    if (text == "/ew3") {
-      if (ew3 == 0) {
-        ew3 = 1;
-        bot.sendMessage(chat_id, "MÜLL RAUS BRINGEN text set active");
-      } else {
-        ew3 = 0;
-        bot.sendMessage(chat_id, "MÜLL RAUS BRINGEN text set inactive");
+    if (langLEDlayout == 1) {  // EN:
+      if (text == "/ew1") {
+        if (ew1 == 0) {
+          ew1 = 1;
+          bot.sendMessage(chat_id, "COME HERE text set active " + emoActive);
+        } else {
+          ew1 = 0;
+          bot.sendMessage(chat_id, "COME HERE text set inactive " + emoInactive);
+        }
+        preferences.putUInt("ew1", ew1);
+        update_display();
       }
-      preferences.putUInt("ew3", ew3);
-      update_display();
-    }
 
-    if (text == "/ew4") {
-      if (ew4 == 0) {
-        ew4 = 1;
-        bot.sendMessage(chat_id, "AUTO text set active");
-      } else {
-        ew4 = 0;
-        bot.sendMessage(chat_id, "AUTO text set inactive");
+      if (text == "/ew2") {
+        if (ew2 == 0) {
+          ew2 = 1;
+          bot.sendMessage(chat_id, "LUNCH TIME text set active " + emoActive);
+        } else {
+          ew2 = 0;
+          bot.sendMessage(chat_id, "LUNCH TIME text set inactive " + emoInactive);
+        }
+        preferences.putUInt("ew2", ew2);
+        update_display();
       }
-      preferences.putUInt("ew4", ew4);
-      update_display();
-    }
 
-    if (text == "/ew5") {
-      if (ew5 == 0) {
-        ew5 = 1;
-        bot.sendMessage(chat_id, "FEIERTAG text set active");
-      } else {
-        ew5 = 0;
-        bot.sendMessage(chat_id, "FEIERTAG text set inactive");
+      if (text == "/ew3") {
+        if (ew3 == 0) {
+          ew3 = 1;
+          bot.sendMessage(chat_id, "ALARM text set active " + emoActive);
+        } else {
+          ew3 = 0;
+          bot.sendMessage(chat_id, "ALARM text set inactive " + emoInactive);
+        }
+        preferences.putUInt("ew3", ew3);
+        update_display();
       }
-      preferences.putUInt("ew5", ew5);
-      update_display();
-    }
 
-    if (text == "/ew6") {
-      if (ew6 == 0) {
-        ew6 = 1;
-        bot.sendMessage(chat_id, "FORMEL1 text set active");
-      } else {
-        ew6 = 0;
-        bot.sendMessage(chat_id, "FORMEL1 text set inactive");
+      if (text == "/ew4") {
+        if (ew4 == 0) {
+          ew4 = 1;
+          bot.sendMessage(chat_id, "GARBAGE text set active " + emoActive);
+        } else {
+          ew4 = 0;
+          bot.sendMessage(chat_id, "GARBAGE text set inactive " + emoInactive);
+        }
+        preferences.putUInt("ew4", ew4);
+        update_display();
       }
-      preferences.putUInt("ew6", ew6);
-      update_display();
-    }
 
-    if (text == "/ew7") {
-      if (ew7 == 0) {
-        ew7 = 1;
-        bot.sendMessage(chat_id, "GELBER SACK text set active");
-      } else {
-        ew7 = 0;
-        bot.sendMessage(chat_id, "GELBER SACK text set inactive");
+      if (text == "/ew5") {
+        if (ew5 == 0) {
+          ew5 = 1;
+          bot.sendMessage(chat_id, "HOLIDAY text set active " + emoActive);
+        } else {
+          ew5 = 0;
+          bot.sendMessage(chat_id, "HOLIDAY text set inactive " + emoInactive);
+        }
+        preferences.putUInt("ew5", ew5);
+        update_display();
       }
-      preferences.putUInt("ew7", ew7);
-      update_display();
-    }
 
-    if (text == "/ew8") {
-      if (ew8 == 0) {
-        ew8 = 1;
-        bot.sendMessage(chat_id, "URLAUB text set active");
-      } else {
-        ew8 = 0;
-        bot.sendMessage(chat_id, "URLAUB text set inactive");
+      if (text == "/ew6") {
+        if (ew6 == 0) {
+          ew6 = 1;
+          bot.sendMessage(chat_id, "TEMPERATURE text set active " + emoActive);
+        } else {
+          ew6 = 0;
+          bot.sendMessage(chat_id, "TEMPERATURE text set inactive " + emoInactive);
+        }
+        preferences.putUInt("ew6", ew6);
+        update_display();
       }
-      preferences.putUInt("ew8", ew8);
-      update_display();
-    }
 
-    if (text == "/ew9") {
-      if (ew9 == 0) {
-        ew9 = 1;
-        bot.sendMessage(chat_id, "WERKSTATT text set active");
-      } else {
-        ew9 = 0;
-        bot.sendMessage(chat_id, "WERKSTATT text set inactive");
+      if (text == "/ew7") {
+        if (ew7 == 0) {
+          ew7 = 1;
+          bot.sendMessage(chat_id, "DATE text set active " + emoActive);
+        } else {
+          ew7 = 0;
+          bot.sendMessage(chat_id, "DATE text set inactive " + emoInactive);
+        }
+        preferences.putUInt("ew7", ew7);
+        update_display();
       }
-      preferences.putUInt("ew9", ew9);
-      update_display();
-    }
 
-    if (text == "/ew10") {
-      if (ew10 == 0) {
-        ew10 = 1;
-        bot.sendMessage(chat_id, "ZEIT ZUM ZOCKEN text set active");
-      } else {
-        ew10 = 0;
-        bot.sendMessage(chat_id, "ZEIT ZUM ZOCKEN text set inactive");
+      if (text == "/ew8") {
+        if (ew8 == 0) {
+          ew8 = 1;
+          bot.sendMessage(chat_id, "BIRTHDAY text set active " + emoActive);
+        } else {
+          ew8 = 0;
+          bot.sendMessage(chat_id, "BIRTHDAY text set inactive " + emoInactive);
+        }
+        preferences.putUInt("ew8", ew8);
+        update_display();
       }
-      preferences.putUInt("ew10", ew10);
-      update_display();
-    }
 
-    if (text == "/ew11") {
-      if (ew11 == 0) {
-        ew11 = 1;
-        bot.sendMessage(chat_id, "FRISEUR text set active");
-      } else {
-        ew11 = 0;
-        bot.sendMessage(chat_id, "FRISEUR text set inactive");
+      if (text == "/ew9") {
+        if (ew9 == 0) {
+          ew9 = 1;
+          bot.sendMessage(chat_id, "DOORBELL text set active " + emoActive);
+        } else {
+          ew9 = 0;
+          bot.sendMessage(chat_id, "DOORBELL text set inactive " + emoInactive);
+        }
+        preferences.putUInt("ew9", ew9);
+        update_display();
       }
-      preferences.putUInt("ew11", ew11);
-      update_display();
-    }
 
-    if (text == "/ew12") {
-      if (ew12 == 0) {
-        ew12 = 1;
-        bot.sendMessage(chat_id, "TERMIN text set active");
-      } else {
-        ew12 = 0;
-        bot.sendMessage(chat_id, "TERMIN text set inactive");
+      if (text == "/start") {
+        String welcome = "Welcome to WordClock Telegram bot, " + from_name + ". " + "\xF0\x9F\x98\x8A" + "\n";
+        welcome += "This is a WordClock chat action test message.\n\n";
+        welcome += "Use /ew1, /ew2, /ew3, /ew4, /ew5, /ew6, /ew7, /ew8, /ew9 or the menu to set the extra words.\n\n";
+        bot.sendMessage(chat_id, welcome);
       }
-      preferences.putUInt("ew12", ew12);
-      update_display();
-    }
-
-    if (text == "/start") {
-      String welcome = "Welcome to WordClock Telegram bot, " + from_name + ".\n";
-      welcome += "This is a WordClock chat action test message.\n\n";
-      bot.sendMessage(chat_id, welcome);
     }
   }
 
@@ -2395,87 +2940,153 @@ void handleNewMessages(int numNewMessages) {
 // # Set extra words:
 // ###########################################################################################################################################
 void set_extra_words() {
+  // ########################################################### DE:
+  if (langLEDlayout == 0) {  // DE:
+    if (ew1 == 1) {
+      setLEDexCol(11, 15, 1, redVal_ew1, greenVal_ew1, blueVal_ew1);  // ew1 - ALARM text
+    } else {
+      setLED(11, 15, 0);  // ew1 - ALARM text
+    }
 
-  if (ew1 == 1) {
-    setLEDexCol(11, 15, 1, redVal_ew1, greenVal_ew1, blueVal_ew1);  // ew1 - ALARM text
-  } else {
-    setLED(11, 15, 0);  // ew1 - ALARM text
+    if (ew2 == 1) {
+      setLEDexCol(1, 10, 1, redVal_ew2, greenVal_ew2, blueVal_ew2);  // ew2 - GEBURTSTAG text
+    } else {
+      setLED(1, 10, 0);  // ew2 - GEBURTSTAG text
+    }
+
+    if (ew3 == 1) {
+      setLEDexCol(16, 19, 1, redVal_ew3, greenVal_ew3, blueVal_ew3);  // ew3 - MÜLL RAUS BRINGEN text
+      setLEDexCol(58, 61, 1, redVal_ew3, greenVal_ew3, blueVal_ew3);  // ew3 - MÜLL RAUS BRINGEN text
+      setLEDexCol(73, 79, 1, redVal_ew3, greenVal_ew3, blueVal_ew3);  // ew3 - MÜLL RAUS BRINGEN text
+    } else {
+      setLED(16, 19, 0);  // ew3 - MÜLL RAUS BRINGEN text
+      setLED(58, 61, 0);  // ew3 - MÜLL RAUS BRINGEN text
+      setLED(73, 79, 0);  // ew3 - MÜLL RAUS BRINGEN text
+    }
+
+    if (ew4 == 1) {
+      setLEDexCol(20, 23, 1, redVal_ew4, greenVal_ew4, blueVal_ew4);  // ew4 - AUTO text
+    } else {
+      setLED(20, 23, 0);  // ew4 - AUTO text
+    }
+
+    if (ew5 == 1) {
+      setLEDexCol(24, 31, 1, redVal_ew5, greenVal_ew5, blueVal_ew5);  // ew5 - FEIERTAG text
+    } else {
+      setLED(24, 31, 0);  // ew5 - FEIERTAG text
+    }
+
+    if (ew6 == 1) {
+      setLEDexCol(40, 46, 1, redVal_ew6, greenVal_ew6, blueVal_ew6);  // ew6 - FORMEL1 text
+    } else {
+      setLED(40, 46, 0);  // ew6 - FORMEL1 text
+    }
+
+    if (ew7 == 1) {
+      setLEDexCol(64, 69, 1, redVal_ew7, greenVal_ew7, blueVal_ew7);  // ew7 - GELBER SACK text
+      setLEDexCol(80, 83, 1, redVal_ew7, greenVal_ew7, blueVal_ew7);  // ew7 - GELBER SACK text
+    } else {
+      setLED(64, 69, 0);  // ew7 - GELBER SACK text
+      setLED(80, 83, 0);  // ew7 - GELBER SACK text
+    }
+
+    if (ew8 == 1) {
+      setLEDexCol(101, 106, 1, redVal_ew8, greenVal_ew8, blueVal_ew8);  // ew8 - URLAUB text
+    } else {
+      setLED(101, 106, 0);  // ew8 - URLAUB text
+    }
+
+    if (ew9 == 1) {
+      setLEDexCol(116, 124, 1, redVal_ew9, greenVal_ew9, blueVal_ew9);  // ew9 - WERKSTATT text
+    } else {
+      setLED(116, 124, 0);  // ew9 - WERKSTATT text
+    }
+
+    if (ew10 == 1) {
+      setLEDexCol(84, 87, 1, redVal_ew10, greenVal_ew10, blueVal_ew10);    // ew10 - ZEIT ZUM ZOCKEN text
+      setLEDexCol(125, 127, 1, redVal_ew10, greenVal_ew10, blueVal_ew10);  // ew10 - ZEIT ZUM ZOCKEN text
+      setLEDexCol(128, 133, 1, redVal_ew10, greenVal_ew10, blueVal_ew10);  // ew10 - ZEIT ZUM ZOCKEN text
+    } else {
+      setLED(84, 87, 0);    // ew10 - ZEIT ZUM ZOCKEN text
+      setLED(125, 127, 0);  // ew10 - ZEIT ZUM ZOCKEN text
+      setLED(128, 133, 0);  // ew10 - ZEIT ZUM ZOCKEN text
+    }
+
+    if (ew11 == 1) {
+      setLEDexCol(134, 140, 1, redVal_ew11, greenVal_ew11, blueVal_ew11);  // ew11 - FRISEUR text
+    } else {
+      setLED(134, 139, 0);  // ew11 - FRISEUR text (140 = last letter of F of word FÜNF not set back to complete the word FÜNF)
+    }
+
+    if (ew12 == 1) {
+      setLEDexCol(160, 165, 1, redVal_ew12, greenVal_ew12, blueVal_ew12);  // ew12 - TERMIN text
+    } else {
+      setLED(160, 165, 0);  // ew12 - TERMIN text
+    }
   }
 
-  if (ew2 == 1) {
-    setLEDexCol(1, 10, 1, redVal_ew2, greenVal_ew2, blueVal_ew2);  // ew2 - GEBURTSTAG text
-  } else {
-    setLED(1, 10, 0);  // ew2 - GEBURTSTAG text
-  }
+  // ########################################################### DE:
+  if (langLEDlayout == 1) {  // EN:
+    if (ew1 == 1) {
+      setLEDexCol(10, 13, 1, redVal_ew1, greenVal_ew1, blueVal_ew1);  // ew1 - COME HERE text
+      setLEDexCol(5, 8, 1, redVal_ew1, greenVal_ew1, blueVal_ew1);    // ew1 - COME HERE text
+    } else {
+      setLED(10, 13, 0);  // ew1 - COME HERE text
+      setLED(5, 8, 0);    // ew1 - COME HERE text
+    }
 
-  if (ew3 == 1) {
-    setLEDexCol(16, 19, 1, redVal_ew3, greenVal_ew3, blueVal_ew3);  // ew3 - MÜLL RAUS BRINGEN text
-    setLEDexCol(58, 61, 1, redVal_ew3, greenVal_ew3, blueVal_ew3);  // ew3 - MÜLL RAUS BRINGEN text
-    setLEDexCol(73, 79, 1, redVal_ew3, greenVal_ew3, blueVal_ew3);  // ew3 - MÜLL RAUS BRINGEN text
-  } else {
-    setLED(16, 19, 0);  // ew3 - MÜLL RAUS BRINGEN text
-    setLED(58, 61, 0);  // ew3 - MÜLL RAUS BRINGEN text
-    setLED(73, 79, 0);  // ew3 - MÜLL RAUS BRINGEN text
-  }
+    if (ew2 == 1) {
+      setLEDexCol(0, 4, 1, redVal_ew2, greenVal_ew2, blueVal_ew2);    // ew2 - LUNCH TIME text
+      setLEDexCol(28, 31, 1, redVal_ew2, greenVal_ew2, blueVal_ew2);  // ew2 - LUNCH TIME text
+    } else {
+      setLED(0, 4, 0);    // ew2 - LUNCH TIME text
+      setLED(28, 31, 0);  // ew2 - LUNCH TIME text
+    }
 
-  if (ew4 == 1) {
-    setLEDexCol(20, 23, 1, redVal_ew4, greenVal_ew4, blueVal_ew4);  // ew4 - AUTO text
-  } else {
-    setLED(20, 23, 0);  // ew4 - AUTO text
-  }
+    if (ew3 == 1) {
+      setLEDexCol(39, 43, 1, redVal_ew3, greenVal_ew3, blueVal_ew3);  // ew3 - ALARM text
 
-  if (ew5 == 1) {
-    setLEDexCol(24, 31, 1, redVal_ew5, greenVal_ew5, blueVal_ew5);  // ew5 - FEIERTAG text
-  } else {
-    setLED(24, 31, 0);  // ew5 - FEIERTAG text
-  }
+    } else {
+      setLED(39, 43, 0);  // ew3 - ALARM text
+    }
 
-  if (ew6 == 1) {
-    setLEDexCol(40, 46, 1, redVal_ew6, greenVal_ew6, blueVal_ew6);  // ew6 - FORMEL1 text
-  } else {
-    setLED(40, 46, 0);  // ew6 - FORMEL1 text
-  }
+    if (ew4 == 1) {
+      setLEDexCol(32, 38, 1, redVal_ew4, greenVal_ew4, blueVal_ew4);  // ew4 - GARBAGE text
+      setLEDexCol(68, 70, 1, redVal_ew4, greenVal_ew4, blueVal_ew4);  // ew4 - GARBAGE text
+    } else {
+      setLED(32, 38, 0);  // ew4 - GARBAGE text
+      setLED(68, 70, 0);  // ew4 - GARBAGE text
+    }
 
-  if (ew7 == 1) {
-    setLEDexCol(64, 69, 1, redVal_ew7, greenVal_ew7, blueVal_ew7);  // ew7 - GELBER SACK text
-    setLEDexCol(80, 83, 1, redVal_ew7, greenVal_ew7, blueVal_ew7);  // ew7 - GELBER SACK text
-  } else {
-    setLED(64, 69, 0);  // ew7 - GELBER SACK text
-    setLED(80, 83, 0);  // ew7 - GELBER SACK text
-  }
+    if (ew5 == 1) {
+      setLEDexCol(65, 71, 1, redVal_ew5, greenVal_ew5, blueVal_ew5);  // ew5 - HOLIDAY text
+    } else {
+      setLED(65, 71, 0);  // ew5 - HOLIDAY text
+    }
 
-  if (ew8 == 1) {
-    setLEDexCol(101, 106, 1, redVal_ew8, greenVal_ew8, blueVal_ew8);  // ew8 - URLAUB text
-  } else {
-    setLED(101, 106, 0);  // ew8 - URLAUB text
-  }
+    if (ew6 == 1) {
+      setLEDexCol(84, 94, 1, redVal_ew6, greenVal_ew6, blueVal_ew6);  // ew6 - TEMPERATURE text
+    } else {
+      setLED(84, 94, 0);  // ew6 - TEMPERATURE text
+    }
 
-  if (ew9 == 1) {
-    setLEDexCol(116, 124, 1, redVal_ew9, greenVal_ew9, blueVal_ew9);  // ew9 - WERKSTATT text
-  } else {
-    setLED(116, 124, 0);  // ew9 - WERKSTATT text
-  }
+    if (ew7 == 1) {
+      setLEDexCol(96, 99, 1, redVal_ew7, greenVal_ew7, blueVal_ew7);  // ew7 - DATE text
+    } else {
+      setLED(96, 99, 0);  // ew7 - DATE text
+    }
 
-  if (ew10 == 1) {
-    setLEDexCol(84, 87, 1, redVal_ew10, greenVal_ew10, blueVal_ew10);    // ew10 - ZEIT ZUM ZOCKEN text
-    setLEDexCol(125, 127, 1, redVal_ew10, greenVal_ew10, blueVal_ew10);  // ew10 - ZEIT ZUM ZOCKEN text
-    setLEDexCol(128, 133, 1, redVal_ew10, greenVal_ew10, blueVal_ew10);  // ew10 - ZEIT ZUM ZOCKEN text
-  } else {
-    setLED(84, 87, 0);    // ew10 - ZEIT ZUM ZOCKEN text
-    setLED(125, 127, 0);  // ew10 - ZEIT ZUM ZOCKEN text
-    setLED(128, 133, 0);  // ew10 - ZEIT ZUM ZOCKEN text
-  }
+    if (ew8 == 1) {
+      setLEDexCol(112, 119, 1, redVal_ew8, greenVal_ew8, blueVal_ew8);  // ew8 - BIRTHDAY text
+    } else {
+      setLED(112, 119, 0);  // ew8 - BIRTHDAY text
+    }
 
-  if (ew11 == 1) {
-    setLEDexCol(134, 140, 1, redVal_ew11, greenVal_ew11, blueVal_ew11);  // ew11 - FRISEUR text
-  } else {
-    setLED(134, 139, 0);  // ew11 - FRISEUR text (140 = last letter of F of word FÜNF not set back to complete the word FÜNF)
-  }
-
-  if (ew12 == 1) {
-    setLEDexCol(160, 165, 1, redVal_ew12, greenVal_ew12, blueVal_ew12);  // ew12 - TERMIN text
-  } else {
-    setLED(160, 165, 0);  // ew12 - TERMIN text
+    if (ew9 == 1) {
+      setLEDexCol(148, 155, 1, redVal_ew9, greenVal_ew9, blueVal_ew9);  // ew9 - DOORBELL text
+    } else {
+      setLED(148, 155, 0);  // ew9 - DOORBELL text
+    }
   }
 }
 
@@ -2645,6 +3256,7 @@ void handleOTAupdate() {
 void handleExtraWords() {
 
   updatedevice = false;
+  // delay(1000);
 
   // OTA update server pages urls:
   ewserver.on("/", HTTP_GET, []() {
@@ -2652,174 +3264,314 @@ void handleExtraWords() {
     ewserver.send(200, "text/html", "WordClock web server on port 8080 is up...");
   });
 
+  // ################################################################## DE:
+  if (langLEDlayout == 0) {  // DE:
 
-  ewserver.on("/ew1", HTTP_GET, []() {
-    ewserver.sendHeader("Connection", "close");
-    if (ew1 == 0) {
-      ew1 = 1;
-      ewserver.send(200, "text/html", "ALARM text set active");
-    } else {
-      ew1 = 0;
-      ewserver.send(200, "text/html", "ALARM text set inactive");
-    }
-    preferences.putUInt("ew1", ew1);
-    update_display();
-  });
-
-
-  ewserver.on("/ew2", HTTP_GET, []() {
-    ewserver.sendHeader("Connection", "close");
-    if (ew2 == 0) {
-      ew2 = 1;
-      ewserver.send(200, "text/html", "GEBURTSTAG text set active");
-    } else {
-      ew2 = 0;
-      ewserver.send(200, "text/html", "GEBURTSTAG text set inactive");
-    }
-    preferences.putUInt("ew2", ew2);
-    update_display();
-  });
+    ewserver.on("/ew1", HTTP_GET, []() {
+      ewserver.sendHeader("Connection", "close");
+      if (ew1 == 0) {
+        ew1 = 1;
+        ewserver.send(200, "text/html", "ALARM text set active");
+      } else {
+        ew1 = 0;
+        ewserver.send(200, "text/html", "ALARM text set inactive");
+      }
+      preferences.putUInt("ew1", ew1);
+      update_display();
+    });
 
 
-  ewserver.on("/ew3", HTTP_GET, []() {
-    ewserver.sendHeader("Connection", "close");
-    if (ew3 == 0) {
-      ew3 = 1;
-      ewserver.send(200, "text/html", "MUELL RAUS BRINGEN text set active");
-    } else {
-      ew3 = 0;
-      ewserver.send(200, "text/html", "MUELL RAUS BRINGEN text set inactive");
-    }
-    preferences.putUInt("ew3", ew3);
-    update_display();
-  });
+    ewserver.on("/ew2", HTTP_GET, []() {
+      ewserver.sendHeader("Connection", "close");
+      if (ew2 == 0) {
+        ew2 = 1;
+        ewserver.send(200, "text/html", "GEBURTSTAG text set active");
+      } else {
+        ew2 = 0;
+        ewserver.send(200, "text/html", "GEBURTSTAG text set inactive");
+      }
+      preferences.putUInt("ew2", ew2);
+      update_display();
+    });
 
 
-  ewserver.on("/ew4", HTTP_GET, []() {
-    ewserver.sendHeader("Connection", "close");
-    if (ew4 == 0) {
-      ew4 = 1;
-      ewserver.send(200, "text/html", "AUTO text set active");
-    } else {
-      ew4 = 0;
-      ewserver.send(200, "text/html", "AUTO text set inactive");
-    }
-    preferences.putUInt("ew4", ew4);
-    update_display();
-  });
+    ewserver.on("/ew3", HTTP_GET, []() {
+      ewserver.sendHeader("Connection", "close");
+      if (ew3 == 0) {
+        ew3 = 1;
+        ewserver.send(200, "text/html", "MUELL RAUS BRINGEN text set active");
+      } else {
+        ew3 = 0;
+        ewserver.send(200, "text/html", "MUELL RAUS BRINGEN text set inactive");
+      }
+      preferences.putUInt("ew3", ew3);
+      update_display();
+    });
 
 
-  ewserver.on("/ew5", HTTP_GET, []() {
-    ewserver.sendHeader("Connection", "close");
-    if (ew5 == 0) {
-      ew5 = 1;
-      ewserver.send(200, "text/html", "FEIERTAG text set active");
-    } else {
-      ew5 = 0;
-      ewserver.send(200, "text/html", "FEIERTAG text set inactive");
-    }
-    preferences.putUInt("ew5", ew5);
-    update_display();
-  });
+    ewserver.on("/ew4", HTTP_GET, []() {
+      ewserver.sendHeader("Connection", "close");
+      if (ew4 == 0) {
+        ew4 = 1;
+        ewserver.send(200, "text/html", "AUTO text set active");
+      } else {
+        ew4 = 0;
+        ewserver.send(200, "text/html", "AUTO text set inactive");
+      }
+      preferences.putUInt("ew4", ew4);
+      update_display();
+    });
 
 
-  ewserver.on("/ew6", HTTP_GET, []() {
-    ewserver.sendHeader("Connection", "close");
-    if (ew6 == 0) {
-      ew6 = 1;
-      ewserver.send(200, "text/html", "FORMEL1 text set active");
-    } else {
-      ew6 = 0;
-      ewserver.send(200, "text/html", "FORMEL1 text set inactive");
-    }
-    preferences.putUInt("ew6", ew6);
-    update_display();
-  });
+    ewserver.on("/ew5", HTTP_GET, []() {
+      ewserver.sendHeader("Connection", "close");
+      if (ew5 == 0) {
+        ew5 = 1;
+        ewserver.send(200, "text/html", "FEIERTAG text set active");
+      } else {
+        ew5 = 0;
+        ewserver.send(200, "text/html", "FEIERTAG text set inactive");
+      }
+      preferences.putUInt("ew5", ew5);
+      update_display();
+    });
 
 
-  ewserver.on("/ew7", HTTP_GET, []() {
-    ewserver.sendHeader("Connection", "close");
-    if (ew7 == 0) {
-      ew7 = 1;
-      ewserver.send(200, "text/html", "GELBER SACK text set active");
-    } else {
-      ew7 = 0;
-      ewserver.send(200, "text/html", "GELBER SACK text set inactive");
-    }
-    preferences.putUInt("ew7", ew7);
-    update_display();
-  });
+    ewserver.on("/ew6", HTTP_GET, []() {
+      ewserver.sendHeader("Connection", "close");
+      if (ew6 == 0) {
+        ew6 = 1;
+        ewserver.send(200, "text/html", "FORMEL1 text set active");
+      } else {
+        ew6 = 0;
+        ewserver.send(200, "text/html", "FORMEL1 text set inactive");
+      }
+      preferences.putUInt("ew6", ew6);
+      update_display();
+    });
 
 
-  ewserver.on("/ew8", HTTP_GET, []() {
-    ewserver.sendHeader("Connection", "close");
-    if (ew8 == 0) {
-      ew8 = 1;
-      ewserver.send(200, "text/html", "URLAUB text set active");
-    } else {
-      ew8 = 0;
-      ewserver.send(200, "text/html", "URLAUB text set inactive");
-    }
-    preferences.putUInt("ew8", ew8);
-    update_display();
-  });
+    ewserver.on("/ew7", HTTP_GET, []() {
+      ewserver.sendHeader("Connection", "close");
+      if (ew7 == 0) {
+        ew7 = 1;
+        ewserver.send(200, "text/html", "GELBER SACK text set active");
+      } else {
+        ew7 = 0;
+        ewserver.send(200, "text/html", "GELBER SACK text set inactive");
+      }
+      preferences.putUInt("ew7", ew7);
+      update_display();
+    });
 
 
-  ewserver.on("/ew9", HTTP_GET, []() {
-    ewserver.sendHeader("Connection", "close");
-    if (ew9 == 0) {
-      ew9 = 1;
-      ewserver.send(200, "text/html", "WERKSTATT text set active");
-    } else {
-      ew9 = 0;
-      ewserver.send(200, "text/html", "WERKSTATT text set inactive");
-    }
-    preferences.putUInt("ew9", ew9);
-    update_display();
-  });
+    ewserver.on("/ew8", HTTP_GET, []() {
+      ewserver.sendHeader("Connection", "close");
+      if (ew8 == 0) {
+        ew8 = 1;
+        ewserver.send(200, "text/html", "URLAUB text set active");
+      } else {
+        ew8 = 0;
+        ewserver.send(200, "text/html", "URLAUB text set inactive");
+      }
+      preferences.putUInt("ew8", ew8);
+      update_display();
+    });
 
 
-  ewserver.on("/ew10", HTTP_GET, []() {
-    ewserver.sendHeader("Connection", "close");
-    if (ew10 == 0) {
-      ew10 = 1;
-      ewserver.send(200, "text/html", "ZEIT ZUM ZOCKEN text set active");
-    } else {
-      ew10 = 0;
-      ewserver.send(200, "text/html", "ZEIT ZUM ZOCKEN text set inactive");
-    }
-    preferences.putUInt("ew10", ew10);
-    update_display();
-  });
+    ewserver.on("/ew9", HTTP_GET, []() {
+      ewserver.sendHeader("Connection", "close");
+      if (ew9 == 0) {
+        ew9 = 1;
+        ewserver.send(200, "text/html", "WERKSTATT text set active");
+      } else {
+        ew9 = 0;
+        ewserver.send(200, "text/html", "WERKSTATT text set inactive");
+      }
+      preferences.putUInt("ew9", ew9);
+      update_display();
+    });
 
 
-  ewserver.on("/ew11", HTTP_GET, []() {
-    ewserver.sendHeader("Connection", "close");
-    if (ew11 == 0) {
-      ew11 = 1;
-      ewserver.send(200, "text/html", "FRISEUR text set active");
-    } else {
-      ew11 = 0;
-      ewserver.send(200, "text/html", "FRISEUR text set inactive");
-    }
-    preferences.putUInt("ew11", ew11);
-    update_display();
-  });
+    ewserver.on("/ew10", HTTP_GET, []() {
+      ewserver.sendHeader("Connection", "close");
+      if (ew10 == 0) {
+        ew10 = 1;
+        ewserver.send(200, "text/html", "ZEIT ZUM ZOCKEN text set active");
+      } else {
+        ew10 = 0;
+        ewserver.send(200, "text/html", "ZEIT ZUM ZOCKEN text set inactive");
+      }
+      preferences.putUInt("ew10", ew10);
+      update_display();
+    });
 
 
-  ewserver.on("/ew12", HTTP_GET, []() {
-    ewserver.sendHeader("Connection", "close");
-    if (ew12 == 0) {
-      ew12 = 1;
-      ewserver.send(200, "text/html", "TERMIN text set active");
-    } else {
-      ew12 = 0;
-      ewserver.send(200, "text/html", "TERMIN text set inactive");
-    }
-    preferences.putUInt("ew12", ew12);
-    update_display();
-  });
+    ewserver.on("/ew11", HTTP_GET, []() {
+      ewserver.sendHeader("Connection", "close");
+      if (ew11 == 0) {
+        ew11 = 1;
+        ewserver.send(200, "text/html", "FRISEUR text set active");
+      } else {
+        ew11 = 0;
+        ewserver.send(200, "text/html", "FRISEUR text set inactive");
+      }
+      preferences.putUInt("ew11", ew11);
+      update_display();
+    });
 
+
+    ewserver.on("/ew12", HTTP_GET, []() {
+      ewserver.sendHeader("Connection", "close");
+      if (ew12 == 0) {
+        ew12 = 1;
+        ewserver.send(200, "text/html", "TERMIN text set active");
+      } else {
+        ew12 = 0;
+        ewserver.send(200, "text/html", "TERMIN text set inactive");
+      }
+      preferences.putUInt("ew12", ew12);
+      update_display();
+    });
+  }
+
+  // ################################################################## EN:
+  if (langLEDlayout == 1) {  // EN:
+    // ew1 - COME HERE text
+    // ew2 - LUNCH TIME text
+    // ew3 - ALARM text
+    // ew4 - GARBAGE text
+    // ew5 - HOLIDAY text
+    // ew6 - TEMPERATURE text
+    // ew7 - DATE text
+    // ew8 - BIRTHDAY text
+    // ew9 - DOORBELL text
+
+    ewserver.on("/ew1", HTTP_GET, []() {
+      ewserver.sendHeader("Connection", "close");
+      if (ew1 == 0) {
+        ew1 = 1;
+        ewserver.send(200, "text/html", "COME HERE text set active");
+      } else {
+        ew1 = 0;
+        ewserver.send(200, "text/html", "COME HERE text set inactive");
+      }
+      preferences.putUInt("ew1", ew1);
+      update_display();
+    });
+
+
+    ewserver.on("/ew2", HTTP_GET, []() {
+      ewserver.sendHeader("Connection", "close");
+      if (ew2 == 0) {
+        ew2 = 1;
+        ewserver.send(200, "text/html", "LUNCH TIME text set active");
+      } else {
+        ew2 = 0;
+        ewserver.send(200, "text/html", "LUNCH TIME text set inactive");
+      }
+      preferences.putUInt("ew2", ew2);
+      update_display();
+    });
+
+
+    ewserver.on("/ew3", HTTP_GET, []() {
+      ewserver.sendHeader("Connection", "close");
+      if (ew3 == 0) {
+        ew3 = 1;
+        ewserver.send(200, "text/html", "ALARM text set active");
+      } else {
+        ew3 = 0;
+        ewserver.send(200, "text/html", "ALARM text set inactive");
+      }
+      preferences.putUInt("ew3", ew3);
+      update_display();
+    });
+
+
+    ewserver.on("/ew4", HTTP_GET, []() {
+      ewserver.sendHeader("Connection", "close");
+      if (ew4 == 0) {
+        ew4 = 1;
+        ewserver.send(200, "text/html", "GARBAGE text set active");
+      } else {
+        ew4 = 0;
+        ewserver.send(200, "text/html", "GARBAGE text set inactive");
+      }
+      preferences.putUInt("ew4", ew4);
+      update_display();
+    });
+
+
+    ewserver.on("/ew5", HTTP_GET, []() {
+      ewserver.sendHeader("Connection", "close");
+      if (ew5 == 0) {
+        ew5 = 1;
+        ewserver.send(200, "text/html", "HOLIDAY text set active");
+      } else {
+        ew5 = 0;
+        ewserver.send(200, "text/html", "HOLIDAY text set inactive");
+      }
+      preferences.putUInt("ew5", ew5);
+      update_display();
+    });
+
+
+    ewserver.on("/ew6", HTTP_GET, []() {
+      ewserver.sendHeader("Connection", "close");
+      if (ew6 == 0) {
+        ew6 = 1;
+        ewserver.send(200, "text/html", "TEMPERATURE text set active");
+      } else {
+        ew6 = 0;
+        ewserver.send(200, "text/html", "TEMPERATURE text set inactive");
+      }
+      preferences.putUInt("ew6", ew6);
+      update_display();
+    });
+
+
+    ewserver.on("/ew7", HTTP_GET, []() {
+      ewserver.sendHeader("Connection", "close");
+      if (ew7 == 0) {
+        ew7 = 1;
+        ewserver.send(200, "text/html", "DATE text set active");
+      } else {
+        ew7 = 0;
+        ewserver.send(200, "text/html", "DATE text set inactive");
+      }
+      preferences.putUInt("ew7", ew7);
+      update_display();
+    });
+
+
+    ewserver.on("/ew8", HTTP_GET, []() {
+      ewserver.sendHeader("Connection", "close");
+      if (ew8 == 0) {
+        ew8 = 1;
+        ewserver.send(200, "text/html", "BIRTHDAY text set active");
+      } else {
+        ew8 = 0;
+        ewserver.send(200, "text/html", "BIRTHDAY text set inactive");
+      }
+      preferences.putUInt("ew8", ew8);
+      update_display();
+    });
+
+
+    ewserver.on("/ew9", HTTP_GET, []() {
+      ewserver.sendHeader("Connection", "close");
+      if (ew9 == 0) {
+        ew9 = 1;
+        ewserver.send(200, "text/html", "DOORBELL text set active");
+      } else {
+        ew9 = 0;
+        ewserver.send(200, "text/html", "DOORBELL text set inactive");
+      }
+      preferences.putUInt("ew9", ew9);
+      update_display();
+    });
+  }
 
   ewserver.begin();
 
