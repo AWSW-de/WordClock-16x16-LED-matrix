@@ -6,7 +6,7 @@
 // #
 // # Released under license: GNU General Public License v3.0: https://github.com/AWSW-de/WordClock-16x16-LED-matrix/blob/main/LICENSE
 // #
-// # Compatible with WordClock version: V1.0.5
+// # Compatible with WordClock version: V1.0.6
 // #
 // ###########################################################################################################################################
 /*
@@ -119,7 +119,7 @@ int useTelegramID_default = 0;  // React to your own Telegram CHAT_ID only
 // ###########################################################################################################################################
 // # Variables declaration:
 // ###########################################################################################################################################
-#define DEFAULT_AP_NAME "WordClock"  // WiFi access point name of the ESP8266
+#define DEFAULT_AP_NAME "WordClock"  // WiFi access point name of the ESP32
 const char* hostname = "WordClock";  // Hostname to be set in your router
 
 

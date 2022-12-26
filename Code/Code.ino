@@ -59,7 +59,7 @@
 // ###########################################################################################################################################
 // # Version number of the code:
 // ###########################################################################################################################################
-const char* WORD_CLOCK_VERSION = "V1.0.5";
+const char* WORD_CLOCK_VERSION = "V1.0.6";
 
 
 // ###########################################################################################################################################
@@ -1635,7 +1635,7 @@ void show_time(int hours, int minutes) {
 
   // Test a special time:
   // iHour = 23;
-  // iMinute = 35;
+  // iMinute = 45;
 
   // Test the complete day time texts:
   if (testTime == 1) {
@@ -1765,6 +1765,8 @@ void show_time(int hours, int minutes) {
     if ((minDiv == 1) || (minDiv == 5) || (minDiv == 7) || (minDiv == 11)) setLED(140, 143, 1);
     // QUARTER:                                // x:15 + X:45
     if ((minDiv == 3) || (minDiv == 9)) setLED(104, 110, 1);
+    // A:
+    if ((minDiv == 3) || (minDiv == 9)) setLED(51, 51, 1);
     // TEN: (Minutes)                          // x:10 + x:50
     if ((minDiv == 2) || (minDiv == 10)) setLED(101, 103, 1);
     // TWENTY:                                 // x:20 + x:25 + x:35 + x:40
@@ -3237,8 +3239,14 @@ void handleOTAupdate() {
           redVal_time = 0;
           greenVal_time = 255;
           blueVal_time = 0;
-          setLED(165, 172, 1);
-          setLED(52, 57, 1);
+          if (langLEDlayout == 0) {  // DE:
+            setLED(165, 172, 1);
+            setLED(52, 57, 1);
+          }
+          if (langLEDlayout == 1) {  // EN:
+            setLED(24, 28, 1);
+            setLED(120, 126, 1);
+          }
           strip.show();
           delay(3000);
         } else {
