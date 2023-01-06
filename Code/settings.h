@@ -6,7 +6,7 @@
 // #
 // # Released under license: GNU General Public License v3.0: https://github.com/AWSW-de/WordClock-16x16-LED-matrix/blob/main/LICENSE
 // #
-// # Compatible with WordClock version: V1.0.6
+// # Compatible with WordClock version: V1.1.0
 // #
 // ###########################################################################################################################################
 /*
@@ -36,7 +36,7 @@ Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUMPIXELS, LEDPIN, NEO_GRB + NEO_KHZ
 // ###########################################################################################################################################
 // # LED language layout default: !!! SET YOUR DEFAULT LANGUAGE HERE !!!
 // ###########################################################################################################################################
-int langLEDlayout_default = 0;  // LED language layout default (0 = DE; 1 = EN)
+int langLEDlayout_default = 1;  // LED language layout default (0 = DE; 1 = EN)
 // NOTE: You may need to use the "Reset WordClock settings"-button to update the value on the device
 
 
@@ -54,6 +54,7 @@ int intensity_night_default = 5;  // LED intensity (0..255) in day mode   - Impo
 int usenightmode_default = 1;     // Use the night mode to reduce LED intensity during set times
 int day_time_start_default = 7;   // Define day mode start --> time before is then night mode if used
 int day_time_stop_default = 22;   // Define day mode end --> time after is then night mode if used
+int usesinglemin_default = 1;     // Show the single minutes
 // Extra Words default colors:
 int redVal_ew1_default = 255;    // Default ew1 color RED
 int greenVal_ew1_default = 0;    // Default ew1 color GREEN
@@ -144,7 +145,7 @@ String emoInactive = "\xF0\x9F\x91\x8E";
 // 3.: Set a name for the new bot when requested
 // 4.: Set a username for the new bot when requested
 // 5.: Check the "Done! Congratulations" message for the line after "Use this token to access the HTTP API:" and add this line to the setting above here:
-#define BOTtoken "XXXXXXXXXX:YYYYYYYYYYYYYYY-ZZZZZZZZZZZZZZZZZZZZ" 
+#define BOTtoken "XXXXXXXXXX:YYYYYYYYYYYYYYY-ZZZZZZZZZZZZZZZZZZZZ"
 // 6.: Leave the "BotFather" and search for your new bot name.
 // 7.: Select your new created bot and use the "/start" command or the "Start"-button to activate the bot
 // ###########################################################################################################################################
@@ -152,7 +153,7 @@ String emoInactive = "\xF0\x9F\x91\x8E";
 // 9.: In Telegram search user "IDBot" and use the "Start" button
 // 10.: Then type: "/getid"
 // 11.: Copy your own Telegram ID and add this number to the setting above here:
-#define CHAT_ID "1234512345" 
+#define CHAT_ID "1234512345"
 // 12.: Use the button "Reset WordClock settings" in the web configuration to save these values into the connfiguration or add them in the web config manually.
 // 13.: Activate the Telegram support in the web config and restart the device
 // 14: Add this to the Telegram menu:
@@ -208,7 +209,8 @@ ew9 - DOORBELL text
 // ###########################################################################################################################################
 // # Test functions:
 // ###########################################################################################################################################
-int testTime = 0;  // LED text output test from 00:00 to 23:29 o'clock. Each minute is 1 second in the test
+int testTime = 0;   // LED text output test from 00:00 to 23:29 o'clock. Each minute is 1 second in the test
+int debugmode = 0;  // Debug messages output on serial monitor
 
 
 // ###########################################################################################################################################

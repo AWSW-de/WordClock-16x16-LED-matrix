@@ -59,7 +59,7 @@
 // ###########################################################################################################################################
 // # Version number of the code:
 // ###########################################################################################################################################
-const char* WORD_CLOCK_VERSION = "V1.0.6";
+const char* WORD_CLOCK_VERSION = "V1.1.0";
 
 
 // ###########################################################################################################################################
@@ -82,10 +82,11 @@ int iHour = 0;
 int iMinute = 0;
 int iSecond = 0;
 bool updatedevice = true;
+bool updatenow = false;
 bool updatemode = false;
+bool changedvalues = false;
 int WiFiManFix = 0;
 String iStartTime = "Failed to obtain time on startup... Please restart...";
-int currentTimeID;
 int redVal_back, greenVal_back, blueVal_back;
 int redVal_time, greenVal_time, blueVal_time;
 int ew1, ew2, ew3, ew4, ew5, ew6, ew7, ew8, ew9, ew10, ew11, ew12;
@@ -103,7 +104,7 @@ int redVal_ew11, greenVal_ew11, blueVal_ew11;
 int redVal_ew12, greenVal_ew12, blueVal_ew12;
 int intensity, intensity_day, intensity_night;
 int usenightmode, day_time_start, day_time_stop, statusNightMode;
-int useledtest, useshowip;
+int useledtest, useshowip, usesinglemin;
 int statusLabelID, statusNightModeID;
 int useTelegram, useTelegramID;
 uint16_t TelegramSwitcher, TelegramSwitcherID;
@@ -117,7 +118,7 @@ String chat_id = CHAT_ID;
 WiFiClientSecure secured_client;
 UniversalTelegramBot bot(BOTtoken, secured_client);
 unsigned long bot_lasttime;           // last time messages' scan has been done
-const unsigned long BOT_MTBS = 5000;  // mean time between scan messages
+const unsigned long BOT_MTBS = 1000;  // mean time between scan messages
 
 
 // ###########################################################################################################################################
@@ -143,6 +144,7 @@ void setup() {
   ShowIPaddress();                                      // Display the current IP-address
   configNTPTime();                                      // NTP time setup
   setupWebInterface();                                  // Generate the configuration page
+  updatenow = true;                                     // Update the display 1x after startup
   update_display();                                     // Update LED display
   handleOTAupdate();                                    // Start the ESP32 OTA update server
   handleExtraWords();                                   // Start the extra words web access server
@@ -162,11 +164,11 @@ void setup() {
 // ###########################################################################################################################################
 void loop() {
   printLocalTime();
-  if (updatedevice == true) {                  // Allow display updates (normal usage)
-    if (millis() - bot_lasttime > BOT_MTBS) {  // Update only after timeout
-      ESPUI.print(currentTimeID, iStartTime);  // Update web gui "Current Time" label
-      update_display();                        // Update display (1x per minute regulary)
-      if (useTelegram) {                       // Telegram chat action command usage:
+  if (updatedevice == true) {                       // Allow display updates (normal usage)
+    if (millis() - bot_lasttime > BOT_MTBS) {       // Update only after timeout
+      if (changedvalues == true) setFlashValues();  // Write settings to flash
+      update_display();                             // Update display (1x per minute regulary)
+      if (useTelegram) {                            // Telegram chat action command usage:
         int numNewMessages = bot.getUpdates(bot.last_message_received + 1);
         while (numNewMessages) {
           handleNewMessages(numNewMessages);
@@ -198,8 +200,11 @@ void setupWebInterface() {
   // WordClock version:
   ESPUI.label("Version", ControlColor::None, WORD_CLOCK_VERSION);
 
-  // Time:
-  currentTimeID = ESPUI.label("Time", ControlColor::Dark, "Will be updated every 5 seconds...");
+  // Set layout language:
+  if (langLEDlayout == 0) selectLang = "Current layout language: German";
+  if (langLEDlayout == 1) selectLang = "Current layout language: English";
+  if (langLEDlayout == 2) selectLang = "Current layout language: Dutch";
+  ESPUI.button(selectLang, &buttonlangChange, ControlColor::Dark, "Change layout language", (void*)4);
 
 
 
@@ -239,10 +244,8 @@ void setupWebInterface() {
   // Day mode stop time:
   ESPUI.number("Day time ends after", call_day_time_stop, ControlColor::Dark, day_time_stop, 12, 23);
 
-  // Set layout language:
-  if (langLEDlayout == 0) selectLang = "Current layout language: German";
-  if (langLEDlayout == 1) selectLang = "Current layout language: English";
-  ESPUI.button(selectLang, &buttonlangChange, ControlColor::Dark, "Change layout language", (void*)4);
+  // Use night mode function:
+  ESPUI.switcher("Show single minutes to display the minute exact time", &switchSingleMinutes, ControlColor::Dark, usesinglemin);
 
 
 
@@ -468,17 +471,19 @@ void setupWebInterface() {
   // #################
   ESPUI.separator("Telegram support:");
 
-  // Show note when Telegram was not configured yet:
   if ((String(BOTtoken) == "XXXXXXXXXX:YYYYYYYYYYYYYYY-ZZZZZZZZZZZZZZZZZZZZ") || (String(CHAT_ID) == "1234512345")) {
+
+    // Show note when Telegram was not configured yet:
     ESPUI.label("Status:", ControlColor::Dark, "Telegram not configured yet. See intructions in settings.h");
+
+  } else {
+
+    // Use Telegram support:
+    TelegramSwitcher = ESPUI.switcher("Use Telegram support", &switchTelegram, ControlColor::Dark, useTelegram);
+
+    // Reduce Telegram support to your own CHAT_ID:
+    TelegramSwitcherID = ESPUI.switcher("React to your own Telegram ID only", &switchTelegramID, ControlColor::Dark, useTelegramID);
   }
-
-  // Use Telegram support:
-  TelegramSwitcher = ESPUI.switcher("Use Telegram support", &switchTelegram, ControlColor::Dark, useTelegram);
-
-  // Reduce Telegram support to your own CHAT_ID:
-  TelegramSwitcherID = ESPUI.switcher("React to your own Telegram ID only", &switchTelegramID, ControlColor::Dark, useTelegramID);
-
 
 
   // Section Update:
@@ -530,6 +535,7 @@ void setupWebInterface() {
 // # Read settings from flash:
 // ###########################################################################################################################################
 void getFlashValues() {
+  if (debugmode == 1) Serial.println("Read settings from flash: START");
   langLEDlayout = preferences.getUInt("langLEDlayout", langLEDlayout_default);
   redVal_time = preferences.getUInt("redVal_time", redVal_time_default);
   greenVal_time = preferences.getUInt("greenVal_time", greenVal_time_default);
@@ -544,6 +550,7 @@ void getFlashValues() {
   day_time_stop = preferences.getUInt("day_time_stop", day_time_stop_default);
   useledtest = preferences.getUInt("useledtest", useledtest_default);
   useshowip = preferences.getUInt("useshowip", useshowip_default);
+  usesinglemin = preferences.getUInt("usesinglemin", usesinglemin_default);
   useTelegram = preferences.getUInt("useTelegram", useTelegram_default);
   useTelegramID = preferences.getUInt("useTelegramID", useTelegramID_default);
   redVal_ew1 = preferences.getUInt("redVal_ew1", redVal_ew1_default);
@@ -594,6 +601,92 @@ void getFlashValues() {
   ew10 = preferences.getUInt("ew10", ew10_default);
   ew11 = preferences.getUInt("ew11", ew11_default);
   ew12 = preferences.getUInt("ew12", ew12_default);
+  if (debugmode == 1) Serial.println("Read settings from flash: END");
+}
+
+
+// ###########################################################################################################################################
+// # Write settings to flash:
+// ###########################################################################################################################################
+void setFlashValues() {
+  if (debugmode == 1) Serial.println("Write settings to flash: START");
+  changedvalues = false;
+  preferences.putUInt("langLEDlayout", langLEDlayout);
+  preferences.putUInt("redVal_time", redVal_time);
+  preferences.putUInt("greenVal_time", greenVal_time);
+  preferences.putUInt("blueVal_time", blueVal_time);
+  preferences.putUInt("redVal_back", redVal_back);
+  preferences.putUInt("greenVal_back", greenVal_back);
+  preferences.putUInt("blueVal_back", blueVal_back);
+  preferences.putUInt("intensity_day", intensity_day);
+  preferences.putUInt("intensity_night", intensity_night);
+  preferences.putUInt("usenightmode", usenightmode);
+  preferences.putUInt("day_time_start", day_time_start);
+  preferences.putUInt("day_time_stop", day_time_stop);
+  preferences.putUInt("useledtest", useledtest);
+  preferences.putUInt("useshowip", useshowip);
+  preferences.putUInt("usesinglemin", usesinglemin);
+  preferences.putUInt("useTelegram", useTelegram);
+  preferences.putUInt("useTelegramID", useTelegramID);
+  preferences.putUInt("redVal_ew1", redVal_ew1);
+  preferences.putUInt("greenVal_ew1", greenVal_ew1);
+  preferences.putUInt("blueVal_ew1", blueVal_ew1);
+  preferences.putUInt("redVal_ew2", redVal_ew2);
+  preferences.putUInt("greenVal_ew2", greenVal_ew2);
+  preferences.putUInt("blueVal_ew2", blueVal_ew2);
+  preferences.putUInt("redVal_ew3", redVal_ew3);
+  preferences.putUInt("greenVal_ew3", greenVal_ew3);
+  preferences.putUInt("blueVal_ew3", blueVal_ew3);
+  preferences.putUInt("redVal_ew4", redVal_ew4);
+  preferences.putUInt("greenVal_ew4", greenVal_ew4);
+  preferences.putUInt("blueVal_ew4", blueVal_ew4);
+  preferences.putUInt("redVal_ew5", redVal_ew5);
+  preferences.putUInt("greenVal_ew5", greenVal_ew5);
+  preferences.putUInt("blueVal_ew5", blueVal_ew5);
+  preferences.putUInt("redVal_ew6", redVal_ew6);
+  preferences.putUInt("greenVal_ew6", greenVal_ew6);
+  preferences.putUInt("blueVal_ew6", blueVal_ew6);
+  preferences.putUInt("redVal_ew7", redVal_ew7);
+  preferences.putUInt("greenVal_ew7", greenVal_ew7);
+  preferences.putUInt("blueVal_ew7", blueVal_ew7);
+  preferences.putUInt("redVal_ew8", redVal_ew8);
+  preferences.putUInt("greenVal_ew8", greenVal_ew8);
+  preferences.putUInt("blueVal_ew8", blueVal_ew8);
+  preferences.putUInt("redVal_ew9", redVal_ew9);
+  preferences.putUInt("greenVal_ew9", greenVal_ew9);
+  preferences.putUInt("blueVal_ew9", blueVal_ew9);
+  preferences.putUInt("redVal_ew10", redVal_ew10);
+  preferences.putUInt("greenVal_ew10", greenVal_ew10);
+  preferences.putUInt("blueVal_ew10", blueVal_ew10);
+  preferences.putUInt("redVal_ew11", redVal_ew11);
+  preferences.putUInt("greenVal_ew11", greenVal_ew11);
+  preferences.putUInt("blueVal_ew11", blueVal_ew11);
+  preferences.putUInt("redVal_ew12", redVal_ew12);
+  preferences.putUInt("greenVal_ew12", greenVal_ew12);
+  preferences.putUInt("blueVal_ew12", blueVal_ew12);
+  preferences.putUInt("ew1", ew1);
+  preferences.putUInt("ew2", ew2);
+  preferences.putUInt("ew3", ew3);
+  preferences.putUInt("ew4", ew4);
+  preferences.putUInt("ew5", ew5);
+  preferences.putUInt("ew6", ew6);
+  preferences.putUInt("ew7", ew7);
+  preferences.putUInt("ew8", ew8);
+  preferences.putUInt("ew9", ew9);
+  preferences.putUInt("ew10", ew10);
+  preferences.putUInt("ew11", ew11);
+  preferences.putUInt("ew12", ew12);
+  if (debugmode == 1) Serial.println("Write settings to flash: END");
+  if (usenightmode == 1) {
+    if ((iHour <= day_time_stop) && (iHour >= day_time_start)) {
+      ESPUI.print(statusNightModeID, "Day time");
+    } else {
+      ESPUI.print(statusNightModeID, "Night time");
+    }
+  } else {
+    ESPUI.print(statusNightModeID, "Night mode not used");
+  }
+  updatenow = true;  // Update display now...
 }
 
 
@@ -603,24 +696,9 @@ void getFlashValues() {
 int WordClockResetCounter = 0;
 void buttonWordClockReset(Control* sender, int type, void* param) {
   updatedevice = false;
-  Serial.println(String("param: ") + String(int(param)));
+  delay(1000);
   switch (type) {
     case B_DOWN:
-      ESPUI.print(statusLabelID, "WORDCLOCK SETTINGS RESET REQUESTED");
-      back_color();
-      redVal_time = 255;
-      greenVal_time = 0;
-      blueVal_time = 0;
-      if (langLEDlayout == 0) {  // DE:
-        setLED(165, 172, 1);
-        setLED(144, 152, 1);
-      }
-      if (langLEDlayout == 1) {  // EN:
-        setLED(24, 28, 1);
-        setLED(131, 139, 1);
-      }
-      strip.show();
-      delay(1000);
       break;
     case B_UP:
       if (WordClockResetCounter == 1) {
@@ -638,6 +716,7 @@ void buttonWordClockReset(Control* sender, int type, void* param) {
         preferences.putUInt("intensity_night", intensity_night_default);
         preferences.putUInt("useledtest", useledtest_default);
         preferences.putUInt("useshowip", useshowip_default);
+        preferences.putUInt("usesinglemin", usesinglemin_default);
         preferences.putUInt("usenightmode", usenightmode_default);
         preferences.putUInt("day_time_stop", day_time_stop_default);
         preferences.putUInt("day_time_stop", day_time_stop_default);
@@ -706,7 +785,6 @@ void buttonWordClockReset(Control* sender, int type, void* param) {
           setLED(24, 28, 1);
         }
         strip.show();
-        delay(1000);
         Serial.println("####################################################################################################");
         Serial.println("# WORDCLOCK SETTING WERE SET TO DEFAULT... WORDCLOCK WILL NOW RESTART... PLEASE CONFIGURE AGAIN... #");
         Serial.println("####################################################################################################");
@@ -715,6 +793,21 @@ void buttonWordClockReset(Control* sender, int type, void* param) {
       } else {
         Serial.println("Status: WORDCLOCK SETTINGS RESET REQUEST");
         ESPUI.updateButton(sender->id, "! Press button once more to apply settings reset !");
+        ESPUI.print(statusLabelID, "WORDCLOCK SETTINGS RESET REQUESTED");
+        back_color();
+        redVal_time = 255;
+        greenVal_time = 0;
+        blueVal_time = 0;
+        if (langLEDlayout == 0) {  // DE:
+          setLED(165, 172, 1);
+          setLED(144, 152, 1);
+        }
+        if (langLEDlayout == 1) {  // EN:
+          setLED(24, 28, 1);
+          setLED(131, 139, 1);
+        }
+        strip.show();
+        delay(1000);
         WordClockResetCounter = WordClockResetCounter + 1;
       }
       break;
@@ -728,31 +821,16 @@ void buttonWordClockReset(Control* sender, int type, void* param) {
 int langChangeCounter = 0;
 void buttonlangChange(Control* sender, int type, void* param) {
   updatedevice = false;
-  Serial.println(String("param: ") + String(int(param)));
+  delay(1000);
   switch (type) {
     case B_DOWN:
-      ESPUI.print(statusLabelID, "WORDCLOCK LAYOUT LANGUAGE CHANGE REQUESTED");
-      back_color();
-      redVal_time = 255;
-      greenVal_time = 0;
-      blueVal_time = 0;
-      if (langLEDlayout == 0) {  // DE: NEUSTART
-        setLED(165, 172, 1);
-      }
-      if (langLEDlayout == 1) {  // EN: RESET
-        setLED(24, 28, 1);
-      }
-      strip.show();
-      delay(1000);
       break;
     case B_UP:
       if (langChangeCounter == 1) {
         Serial.println("WORDCLOCK LAYOUT LANGUAGE CHANGE EXECUTED");
-        if (langLEDlayout == 0) {  // Flip langLEDlayout setting DE to EN / EN to DE
-          preferences.putUInt("langLEDlayout", 1);
-        } else {
-          preferences.putUInt("langLEDlayout", 0);
-        }
+        if (langLEDlayout == 0) preferences.putUInt("langLEDlayout", 1);  // DE to EN
+        if (langLEDlayout == 1) preferences.putUInt("langLEDlayout", 0);  // EN to DE     // EN to NL
+        // if (langLEDlayout == 2) preferences.putUInt("langLEDlayout", 0);  // NL to DE
         delay(1000);
         preferences.end();
         back_color();
@@ -766,7 +844,6 @@ void buttonlangChange(Control* sender, int type, void* param) {
           setLED(24, 28, 1);
         }
         strip.show();
-        delay(1000);
         Serial.println("##########################################################################");
         Serial.println("# WORDCLOCK LAYOUT LANGUAGE WAS CHANGED... WORDCLOCK WILL NOW RESTART... #");
         Serial.println("##########################################################################");
@@ -775,6 +852,19 @@ void buttonlangChange(Control* sender, int type, void* param) {
       } else {
         Serial.println("WORDCLOCK LAYOUT LANGUAGE CHANGE REQUESTED");
         ESPUI.updateButton(sender->id, "! Press button once more to apply the language change and restart !");
+        ESPUI.print(statusLabelID, "WORDCLOCK LAYOUT LANGUAGE CHANGE REQUESTED");
+        back_color();
+        redVal_time = 255;
+        greenVal_time = 0;
+        blueVal_time = 0;
+        if (langLEDlayout == 0) {  // DE: NEUSTART
+          setLED(165, 172, 1);
+        }
+        if (langLEDlayout == 1) {  // EN: RESET
+          setLED(24, 28, 1);
+        }
+        strip.show();
+        delay(1000);
         langChangeCounter = langChangeCounter + 1;
       }
       break;
@@ -1302,42 +1392,24 @@ int getDigit(int number, int pos) {
 int ResetCounter = 0;
 void buttonRestart(Control* sender, int type, void* param) {
   updatedevice = false;
-  preferences.end();
   delay(1000);
-  Serial.println(String("param: ") + String(int(param)));
+  if (changedvalues == true) {
+    setFlashValues();  // Write settings to flash
+    delay(1000);
+  }
+  preferences.end();
+  if (ResetCounter == 0) ResetTextLEDs(strip.Color(255, 0, 0));
+  if (ResetCounter == 1) ResetTextLEDs(strip.Color(0, 255, 0));
   switch (type) {
     case B_DOWN:
-      ESPUI.print(statusLabelID, "Restart requested");
-      back_color();
-      redVal_time = 255;
-      greenVal_time = 0;
-      blueVal_time = 0;
-      if (langLEDlayout == 0) {  // DE:
-        setLED(165, 172, 1);
-      }
-      if (langLEDlayout == 1) {  // EN:
-        setLED(120, 126, 1);
-      }
-      strip.show();
       break;
     case B_UP:
       if (ResetCounter == 1) {
-        back_color();
-        redVal_time = 0;
-        greenVal_time = 255;
-        blueVal_time = 0;
-        if (langLEDlayout == 0) {  // DE:
-          setLED(165, 172, 1);
-        }
-        if (langLEDlayout == 1) {  // EN:
-          setLED(120, 126, 1);
-        }
-        strip.show();
-        Serial.println("Status: Restart executed");
         delay(1000);
         ESP.restart();
       } else {
         Serial.println("Status: Restart request");
+        ESPUI.print(statusLabelID, "RESTART REQUESTED");
         ESPUI.updateButton(sender->id, "! Press button once more to apply restart !");
         ResetCounter = ResetCounter + 1;
       }
@@ -1352,37 +1424,19 @@ void buttonRestart(Control* sender, int type, void* param) {
 int WIFIResetCounter = 0;
 void buttonWiFiReset(Control* sender, int type, void* param) {
   updatedevice = false;
-  delay(1000);
+  if (WIFIResetCounter == 0) ResetTextLEDs(strip.Color(255, 0, 0));
+  if (WIFIResetCounter == 1) ResetTextLEDs(strip.Color(0, 255, 0));
+  if (WIFIResetCounter == 0) SetWLAN(strip.Color(255, 0, 0));
+  if (WIFIResetCounter == 1) SetWLAN(strip.Color(0, 255, 0));
   switch (type) {
     case B_DOWN:
-      if (WIFIResetCounter == 0) {
-        back_color();
-        redVal_time = 255;
-        greenVal_time = 0;
-        blueVal_time = 0;
-        if (langLEDlayout == 0) {  // DE:
-          setLED(165, 172, 1);
-        }
-        if (langLEDlayout == 1) {  // EN:
-          setLED(24, 28, 1);
-        }
-        SetWLAN(strip.Color(255, 0, 0));
-        ESPUI.print(statusLabelID, "WIFI SETTINGS RESET REQUESTED");
-        delay(1000);
-        preferences.putUInt("WiFiManFix", 0);  // WiFi Manager Fix Reset
-        delay(1000);
-        preferences.end();
-        delay(1000);
-      }
       break;
     case B_UP:
       if (WIFIResetCounter == 1) {
         Serial.println("Status: WIFI SETTINGS RESET REQUEST EXECUTED");
-        delay(1000);
         WiFi.disconnect();
         delay(1000);
         WiFiManager manager;
-        delay(1000);
         manager.resetSettings();
         delay(1000);
         Serial.println("####################################################################################################");
@@ -1391,8 +1445,13 @@ void buttonWiFiReset(Control* sender, int type, void* param) {
         delay(1000);
         ESP.restart();
       } else {
-        Serial.println("Status: WIFI SETTINGS RESET REQUEST");
+        ESPUI.print(statusLabelID, "WIFI SETTINGS RESET REQUESTED");
         ESPUI.updateButton(sender->id, "! Press button once more to apply WiFi reset !");
+        Serial.println("Status: WIFI SETTINGS RESET REQUEST");
+        preferences.putUInt("WiFiManFix", 0);  // WiFi Manager Fix Reset
+        preferences.putUInt("useshowip", 1);   // Show IP-address again
+        delay(250);
+        preferences.end();
         WIFIResetCounter = WIFIResetCounter + 1;
       }
       break;
@@ -1401,35 +1460,71 @@ void buttonWiFiReset(Control* sender, int type, void* param) {
 
 
 // ###########################################################################################################################################
+// # Show a LED output for RESET in the different languages:
+// ###########################################################################################################################################
+void ResetTextLEDs(uint32_t color) {
+  updatedevice = false;
+  delay(1000);
+  back_color();
+
+  if (langLEDlayout == 0) {      // DE:
+    setLEDcol(165, 172, color);  // NEUSTART
+  }
+
+  if (langLEDlayout == 1) {    // EN:
+    setLEDcol(24, 28, color);  // RESET
+  }
+
+  // if (langLEDlayout == 2) {      // NL:
+  //   setLEDcol(33, 33, color);    // RESET
+  // }
+
+  strip.show();
+  delay(1000);
+}
+
+
+
+// ###########################################################################################################################################
+// # Actual function, which controls 1/0 of the LED with color value:
+// ###########################################################################################################################################
+void setLEDcol(int ledNrFrom, int ledNrTo, uint32_t color) {
+  if (ledNrFrom > ledNrTo) {
+    setLED(ledNrTo, ledNrFrom, 1);  // Sets LED numbers in correct order
+  } else {
+    for (int i = ledNrFrom; i <= ledNrTo; i++) {
+      if ((i >= 0) && (i < NUMPIXELS))
+        strip.setPixelColor(i, color);
+    }
+  }
+}
+
+
+// ###########################################################################################################################################
 // # GUI: Update the WordClock:
 // ###########################################################################################################################################
 void buttonUpdate(Control* sender, int type, void* param) {
-  preferences.end();
+  Serial.println("Status: Update request");
   updatedevice = false;
+  preferences.end();
   updatemode = true;
-  delay(1000);
-  Serial.println(String("param: ") + String(int(param)));
-  switch (type) {
-    case B_DOWN:
-      Serial.println("Status: Update request");
-      ESPUI.print(statusLabelID, "Update requested");
-      back_color();
-      redVal_time = 0;
-      greenVal_time = 0;
-      blueVal_time = 255;
-      if (langLEDlayout == 0) {  // DE:
-        setLED(52, 57, 1);
-      }
-      if (langLEDlayout == 1) {  // EN:
-        setLED(48, 53, 1);
-      }
-      strip.show();
-      break;
-    case B_UP:
-      Serial.println("Status: Update executed");
-      ESPUI.updateButton(sender->id, "Update mode active now - Use the update url: >>>");
-      break;
-  }
+  // switch (type) {
+  //   case B_DOWN:
+  //     break;
+  //   case B_UP:
+  back_color();
+  delay(500);
+  redVal_time = 0;
+  greenVal_time = 0;
+  blueVal_time = 255;
+  if (langLEDlayout == 0) setLED(52, 57, 1);  // DE
+  if (langLEDlayout == 1) setLED(48, 53, 1);  // EN
+  strip.show();
+  ESPUI.print(statusLabelID, "Update requested");
+  ESPUI.updateButton(sender->id, "Update mode active now - Use the update url: >>>");
+  Serial.println("Status: Update executed");
+  //     break;
+  // }
 }
 
 
@@ -1438,18 +1533,16 @@ void buttonUpdate(Control* sender, int type, void* param) {
 // ###########################################################################################################################################
 void switchLEDTest(Control* sender, int value) {
   updatedevice = false;
+  delay(1000);
   switch (value) {
     case S_ACTIVE:
-      // Serial.print("Active:");
-      preferences.putUInt("useledtest", 1);
+      useledtest = 1;
       break;
     case S_INACTIVE:
-      // Serial.print("Inactive");
-      preferences.putUInt("useledtest", 0);
+      useledtest = 0;
       break;
   }
-  // Serial.print(" ");
-  // Serial.println(sender->id);
+  changedvalues = true;
   updatedevice = true;
 }
 
@@ -1459,30 +1552,22 @@ void switchLEDTest(Control* sender, int value) {
 // ###########################################################################################################################################
 void switchNightMode(Control* sender, int value) {
   updatedevice = false;
+  delay(1000);
   switch (value) {
     case S_ACTIVE:
-      // Serial.print("Active:");
-      preferences.putUInt("usenightmode", 1);
       usenightmode = 1;
       if ((iHour <= day_time_stop) && (iHour >= day_time_start)) {
         intensity = intensity_day;
-        ESPUI.print(statusNightModeID, "Day time");
       } else {
         intensity = intensity_night;
-        ESPUI.print(statusNightModeID, "Night time");
       }
       break;
     case S_INACTIVE:
-      // Serial.print("Inactive");
-      preferences.putUInt("usenightmode", 0);
-      ESPUI.print(statusNightModeID, "Night mode not used");
       intensity = intensity_day;
       usenightmode = 0;
       break;
   }
-  // Serial.print(" ");
-  // Serial.println(sender->id);
-  update_display();
+  changedvalues = true;
   updatedevice = true;
 }
 
@@ -1492,18 +1577,16 @@ void switchNightMode(Control* sender, int value) {
 // ###########################################################################################################################################
 void switchShowIP(Control* sender, int value) {
   updatedevice = false;
+  delay(1000);
   switch (value) {
     case S_ACTIVE:
-      // Serial.print("Active:");
-      preferences.putUInt("useshowip", 1);
+      useshowip = 1;
       break;
     case S_INACTIVE:
-      // Serial.print("Inactive");
-      preferences.putUInt("useshowip", 0);
+      useshowip = 0;
       break;
   }
-  // Serial.print(" ");
-  // Serial.println(sender->id);
+  changedvalues = true;
   updatedevice = true;
 }
 
@@ -1513,56 +1596,22 @@ void switchShowIP(Control* sender, int value) {
 // ###########################################################################################################################################
 void switchTelegram(Control* sender, int value) {
   updatedevice = false;
+  Serial.println("Status: Restart request");
+  ResetTextLEDs(strip.Color(255, 0, 0));
   switch (value) {
     case S_ACTIVE:
-      if ((String(BOTtoken) == "XXXXXXXXXX:YYYYYYYYYYYYYYY-ZZZZZZZZZZZZZZZZZZZZ") || (String(CHAT_ID) == "1234512345")) {
-        ESPUI.updateSwitcher(TelegramSwitcher, ESPUI.getControl(TelegramSwitcher)->value.toInt() ? false : true);
-        ESPUI.print(statusLabelID, "Telegram not configured yet ==> intructions in settings.h");
-        Serial.println("Telegram not configured yet --> set Telegram switch off again");
-      } else {
-        // Serial.print("Active:");
-        preferences.putUInt("useTelegram", 1);
-        // Restart of ESP needed:
-        delay(1000);
-        preferences.end();
-        delay(1000);
-        Serial.println("Status: Restart request");
-        back_color();
-        redVal_time = 255;
-        greenVal_time = 0;
-        blueVal_time = 0;
-        if (langLEDlayout == 0) {  // DE:
-          setLED(165, 172, 1);
-        }
-        if (langLEDlayout == 1) {  // EN:
-          setLED(120, 126, 1);
-        }
-        strip.show();
-      }
+      useTelegram = 1;
       break;
     case S_INACTIVE:
-      // Serial.print("Inactive");
-      preferences.putUInt("useTelegram", 0);
-      // Restart of ESP needed:
-      delay(1000);
-      preferences.end();
-      delay(1000);
-      Serial.println("Status: Restart request");
-      back_color();
-      redVal_time = 255;
-      greenVal_time = 0;
-      blueVal_time = 0;
-      if (langLEDlayout == 0) {  // DE:
-        setLED(165, 172, 1);
-      }
-      if (langLEDlayout == 1) {  // EN:
-        setLED(120, 126, 1);
-      }
-      strip.show();
+      useTelegram = 0;
       break;
   }
-  // Serial.print(" ");
-  // Serial.println(sender->id);
+  changedvalues = true;
+  setFlashValues();  // Save values!
+  ResetTextLEDs(strip.Color(0, 255, 0));
+  Serial.println("Status: Perform restart now");
+  delay(1000);
+  ESP.restart();
 }
 
 
@@ -1570,24 +1619,37 @@ void switchTelegram(Control* sender, int value) {
 // # GUI: React to your own Telegram CHAT_ID only switch:
 // ###########################################################################################################################################
 void switchTelegramID(Control* sender, int value) {
+  updatedevice = false;
+  delay(1000);
   switch (value) {
     case S_ACTIVE:
-      if ((String(BOTtoken) == "XXXXXXXXXX:YYYYYYYYYYYYYYY-ZZZZZZZZZZZZZZZZZZZZ") || (String(CHAT_ID) == "1234512345")) {
-        ESPUI.updateSwitcher(TelegramSwitcherID, ESPUI.getControl(TelegramSwitcherID)->value.toInt() ? false : true);
-        ESPUI.print(statusLabelID, "Telegram not configured yet ==> intructions in settings.h");
-        Serial.println("Telegram not configured yet --> set Telegram switch off again");
-      } else {
-        // Serial.print("Active:");
-        preferences.putUInt("useTelegramID", 1);
-      }
+      useTelegramID = 1;
       break;
     case S_INACTIVE:
-      // Serial.print("Inactive");
-      preferences.putUInt("useTelegramID", 0);
+      useTelegramID = 0;
       break;
   }
-  //  Serial.print(" ");
-  //  Serial.println(sender->id);
+  changedvalues = true;
+  updatedevice = true;
+}
+
+
+// ###########################################################################################################################################
+// # GUI: Single minutes switch:
+// ###########################################################################################################################################
+void switchSingleMinutes(Control* sender, int value) {
+  updatedevice = false;
+  delay(1000);
+  switch (value) {
+    case S_ACTIVE:
+      usesinglemin = 1;
+      break;
+    case S_INACTIVE:
+      usesinglemin = 0;
+      break;
+  }
+  changedvalues = true;
+  updatedevice = true;
 }
 
 
@@ -1595,14 +1657,11 @@ void switchTelegramID(Control* sender, int value) {
 // # Update the display / time on it:
 // ###########################################################################################################################################
 void update_display() {
-  Serial.println("Update LED display... " + iStartTime);
   if (usenightmode == 1) {
     if ((iHour <= day_time_stop) && (iHour >= day_time_start)) {
       intensity = intensity_day;
-      ESPUI.print(statusNightModeID, "Day time");
     } else {
       intensity = intensity_night;
-      ESPUI.print(statusNightModeID, "Night time");
     }
   } else {
     intensity = intensity_day;
@@ -1610,12 +1669,16 @@ void update_display() {
   strip.setBrightness(intensity);
   if (testTime == 0) {  // Show the current time:
     show_time(iHour, iMinute);
-    delay(1000);
   } else {  // TEST THE DISPLAY TIME OUTPUT:
-    for (int i = 0; i < 25; i++) {
+    strip.setBrightness(33);
+    for (int i = 0; i <= 12; i++) {  // 12 hours only:
+      show_time(i, 0);
+      delay(1000);
+    }
+    for (int i = 0; i <= 3; i++) {  // Hours 0 to 3 with all minute texts:
       for (int y = 0; y < 60; y++) {
         show_time(i, y);
-        delay(1000);
+        delay(500);
       }
     }
   }
@@ -1626,6 +1689,18 @@ void update_display() {
 // # Display hours and minutes text function:
 // ###########################################################################################################################################
 void show_time(int hours, int minutes) {
+  static int lastHourSet = -1;
+  static int lastMinutesSet = -1;
+  if ((lastHourSet == hours && lastMinutesSet == minutes) && updatenow == false) {  // Reduce display updates to new minutes and new config updates
+    return;
+  }
+  String currentTime = String(hours) + ":" + String(minutes) + ":" + String(iSecond);
+  if (updatenow = true) Serial.println("Update LED display... " + currentTime);
+  updatenow = false;
+  lastHourSet = hours;
+  lastMinutesSet = minutes;
+
+
   // Set background color:
   back_color();
 
@@ -1637,16 +1712,10 @@ void show_time(int hours, int minutes) {
   // iHour = 23;
   // iMinute = 45;
 
-  // Test the complete day time texts:
-  if (testTime == 1) {
-    Serial.print(iHour);
-    Serial.print(":");
-    Serial.println(iMinute);
-  }
 
   // divide minute by 5 to get value for display control
   int minDiv = iMinute / 5;
-  showMinutes(iMinute);
+  if (usesinglemin == 1) showMinutes(iMinute);
 
 
   // ########################################################### DE:
@@ -1987,6 +2056,7 @@ void back_color() {
   for (int i = 0; i < NUMPIXELS; i++) {
     strip.setPixelColor(i, c0);
   }
+  delay(500);
 }
 
 
@@ -2003,7 +2073,7 @@ void DisplayTest() {
     uint32_t c1 = strip.Color(redVal_time, greenVal_time, blueVal_time);
     uint32_t c2 = strip.Color(redVal_back, greenVal_back, blueVal_back);
 
-    if (langLEDlayout == 0) {  // DE: WordClock
+    if (langLEDlayout == 0) {  // DE:
       for (int i = 0; i < NUMPIXELS; i++) {
         strip.setPixelColor(i, c2);
         if (i >= 144) {  // WordClock
@@ -2065,7 +2135,6 @@ void WIFI_login() {
   if (!WiFires) {
     Serial.print("Failed to connect to WiFi: ");
     Serial.println(WiFi.SSID());
-    SetWLAN(strip.Color(255, 0, 0));
     if (langLEDlayout == 0) {  // DE:
       for (uint16_t i = 246; i < 248; i++) {
         strip.setPixelColor(i, strip.Color(255, 0, 0));
@@ -2076,12 +2145,11 @@ void WIFI_login() {
         strip.setPixelColor(i, strip.Color(255, 0, 0));
       }
     }
-    strip.show();
-    delay(500);
+    SetWLAN(strip.Color(255, 0, 0));
+    delay(1000);
   } else {
     Serial.print("Connected to WiFi: ");
     Serial.println(WiFi.SSID());
-    SetWLAN(strip.Color(0, 255, 0));
     if (langLEDlayout == 0) {  // DE:
       for (uint16_t i = 246; i < 248; i++) {
         strip.setPixelColor(i, strip.Color(0, 255, 0));
@@ -2092,7 +2160,7 @@ void WIFI_login() {
         strip.setPixelColor(i, strip.Color(0, 255, 0));
       }
     }
-    strip.show();
+    SetWLAN(strip.Color(0, 255, 0));
     delay(1000);
   }
 }
@@ -2105,21 +2173,8 @@ void WiFiManager1stBootFix() {
   WiFiManFix = preferences.getUInt("WiFiManFix", 0);
   if (WiFiManFix == 0) {
     Serial.println("######################################################################");
-    Serial.println("# ESP restart needed becaouse of WiFi Manager Fix");
+    Serial.println("# ESP restart needed because of WiFi Manager Fix");
     Serial.println("######################################################################");
-    back_color();
-    SetWLAN(strip.Color(0, 255, 0));
-    redVal_time = 0;
-    greenVal_time = 255;
-    blueVal_time = 0;
-    if (langLEDlayout == 0) {  // DE:
-      setLED(165, 172, 1);
-    }
-    if (langLEDlayout == 1) {  // EN:
-      setLED(120, 126, 1);
-    }
-    strip.show();
-    delay(1000);
     preferences.putUInt("WiFiManFix", 1);
     delay(1000);
     preferences.end();
@@ -2134,7 +2189,7 @@ void WiFiManager1stBootFix() {
 // ###########################################################################################################################################
 void setLED(int ledNrFrom, int ledNrTo, int switchOn) {
   if (ledNrFrom > ledNrTo) {
-    setLED(ledNrTo, ledNrFrom, switchOn);  //sets LED numbers in correct order (because of the date programming below)
+    setLED(ledNrTo, ledNrFrom, switchOn);  // Sets LED numbers in correct order
   } else {
     for (int i = ledNrFrom; i <= ledNrTo; i++) {
       if ((i >= 0) && (i < NUMPIXELS))
@@ -2171,32 +2226,38 @@ void initTime(String timezone) {
   if (!getLocalTime(&timeinfo)) {
     back_color();
     Serial.println("Failed to obtain time");
-    ESPUI.print(currentTimeID, "Failed to obtain time");
     ESPUI.print(statusLabelID, "Failed to obtain time");
-    redVal_time = 255;
-    greenVal_time = 0;
-    blueVal_time = 0;
     if (langLEDlayout == 0) {  // DE:
-      setLED(84, 87, 1);
-      setLED(165, 172, 1);
+      setLEDexCol(84, 87, 1, 255, 0, 0);
+      setLEDexCol(165, 172, 1, 255, 0, 0);
     }
     if (langLEDlayout == 1) {  // EN:
-      setLED(28, 31, 1);
-      setLED(120, 126, 1);
+      setLEDexCol(28, 31, 1, 255, 0, 0);
+      setLEDexCol(120, 126, 1, 255, 0, 0);
     }
     strip.show();
-    delay(5000);
+    delay(3000);
     ESP.restart();
     return;
+  } else {
+    back_color();
+    if (langLEDlayout == 0) {  // DE:
+      setLEDexCol(84, 87, 1, 0, 255, 0);
+    }
+    if (langLEDlayout == 1) {  // EN:
+      setLEDexCol(28, 31, 1, 0, 255, 0);
+    }
+    strip.show();
+    delay(1000);
+    Serial.println("Got the time from NTP");
+    setTimezone(timezone);
   }
-  Serial.println("Got the time from NTP");
-  setTimezone(timezone);
 }
 // ###########################################################################################################################################
 void printLocalTime() {
   struct tm timeinfo;
   if (!getLocalTime(&timeinfo)) {
-    Serial.println("Failed to obtain time 1");
+    Serial.println("Failed to obtain time ");
     return;
   }
   // Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S zone %Z %z ");
@@ -2213,7 +2274,6 @@ void printLocalTime() {
   // Serial.print(iMinute);
   // Serial.print(":");
   // Serial.println(iSecond);
-  delay(1000);
 }
 // ###########################################################################################################################################
 void setTime(int yr, int month, int mday, int hr, int minute, int sec, int isDst) {
@@ -2237,6 +2297,8 @@ void setTime(int yr, int month, int mday, int hr, int minute, int sec, int isDst
 // # GUI: Convert hex color value to RGB int values - TIME:
 // ###########################################################################################################################################
 void getRGBTIME(String hexvalue) {
+  updatedevice = false;
+  delay(1000);
   hexvalue.toUpperCase();
   char c[7];
   hexvalue.toCharArray(c, 8);
@@ -2249,13 +2311,11 @@ void getRGBTIME(String hexvalue) {
   // Serial.println(green);
   // Serial.print("blue: ");
   // Serial.println(blue);
-  preferences.putUInt("redVal_time", red);
-  preferences.putUInt("greenVal_time", green);
-  preferences.putUInt("blueVal_time", blue);
   redVal_time = red;
   greenVal_time = green;
   blueVal_time = blue;
-  update_display();
+  changedvalues = true;
+  updatedevice = true;
 }
 
 
@@ -2263,6 +2323,8 @@ void getRGBTIME(String hexvalue) {
 // # GUI: Convert hex color value to RGB int values - BACKGROUND:
 // ###########################################################################################################################################
 void getRGBBACK(String hexvalue) {
+  updatedevice = false;
+  delay(1000);
   hexvalue.toUpperCase();
   char c[7];
   hexvalue.toCharArray(c, 8);
@@ -2275,13 +2337,11 @@ void getRGBBACK(String hexvalue) {
   // Serial.println(green);
   // Serial.print("blue: ");
   // Serial.println(blue);
-  preferences.putUInt("redVal_back", red);
-  preferences.putUInt("greenVal_back", green);
-  preferences.putUInt("blueVal_back", blue);
   redVal_back = red;
   greenVal_back = green;
   blueVal_back = blue;
-  update_display();
+  changedvalues = true;
+  updatedevice = true;
 }
 
 
@@ -2327,19 +2387,19 @@ void colCallBACK(Control* sender, int type) {
 // # GUI: Color change for Extra Word ew1:
 // ###########################################################################################################################################
 void colCallew1(Control* sender, int type) {
+  updatedevice = false;
+  delay(1000);
   sender->value.toUpperCase();
   char c[7];
   sender->value.toCharArray(c, 8);
   int red = hexcolorToInt(c[1], c[2]);
   int green = hexcolorToInt(c[3], c[4]);
   int blue = hexcolorToInt(c[5], c[6]);
-  preferences.putUInt("redVal_ew1", red);
-  preferences.putUInt("greenVal_ew1", green);
-  preferences.putUInt("blueVal_ew1", blue);
   redVal_ew1 = red;
   greenVal_ew1 = green;
   blueVal_ew1 = blue;
-  update_display();
+  changedvalues = true;
+  updatedevice = true;
 }
 
 
@@ -2347,19 +2407,19 @@ void colCallew1(Control* sender, int type) {
 // # GUI: Color change for Extra Word ew2:
 // ###########################################################################################################################################
 void colCallew2(Control* sender, int type) {
+  updatedevice = false;
+  delay(1000);
   sender->value.toUpperCase();
   char c[7];
   sender->value.toCharArray(c, 8);
   int red = hexcolorToInt(c[1], c[2]);
   int green = hexcolorToInt(c[3], c[4]);
   int blue = hexcolorToInt(c[5], c[6]);
-  preferences.putUInt("redVal_ew2", red);
-  preferences.putUInt("greenVal_ew2", green);
-  preferences.putUInt("blueVal_ew2", blue);
   redVal_ew2 = red;
   greenVal_ew2 = green;
   blueVal_ew2 = blue;
-  update_display();
+  changedvalues = true;
+  updatedevice = true;
 }
 
 
@@ -2367,19 +2427,19 @@ void colCallew2(Control* sender, int type) {
 // # GUI: Color change for Extra Word ew3:
 // ###########################################################################################################################################
 void colCallew3(Control* sender, int type) {
+  updatedevice = false;
+  delay(1000);
   sender->value.toUpperCase();
   char c[7];
   sender->value.toCharArray(c, 8);
   int red = hexcolorToInt(c[1], c[2]);
   int green = hexcolorToInt(c[3], c[4]);
   int blue = hexcolorToInt(c[5], c[6]);
-  preferences.putUInt("redVal_ew3", red);
-  preferences.putUInt("greenVal_ew3", green);
-  preferences.putUInt("blueVal_ew3", blue);
   redVal_ew3 = red;
   greenVal_ew3 = green;
   blueVal_ew3 = blue;
-  update_display();
+  changedvalues = true;
+  updatedevice = true;
 }
 
 
@@ -2387,19 +2447,19 @@ void colCallew3(Control* sender, int type) {
 // # GUI: Color change for Extra Word ew4:
 // ###########################################################################################################################################
 void colCallew4(Control* sender, int type) {
+  updatedevice = false;
+  delay(1000);
   sender->value.toUpperCase();
   char c[7];
   sender->value.toCharArray(c, 8);
   int red = hexcolorToInt(c[1], c[2]);
   int green = hexcolorToInt(c[3], c[4]);
   int blue = hexcolorToInt(c[5], c[6]);
-  preferences.putUInt("redVal_ew4", red);
-  preferences.putUInt("greenVal_ew4", green);
-  preferences.putUInt("blueVal_ew4", blue);
   redVal_ew4 = red;
   greenVal_ew4 = green;
   blueVal_ew4 = blue;
-  update_display();
+  changedvalues = true;
+  updatedevice = true;
 }
 
 
@@ -2407,19 +2467,19 @@ void colCallew4(Control* sender, int type) {
 // # GUI: Color change for Extra Word ew5:
 // ###########################################################################################################################################
 void colCallew5(Control* sender, int type) {
+  updatedevice = false;
+  delay(1000);
   sender->value.toUpperCase();
   char c[7];
   sender->value.toCharArray(c, 8);
   int red = hexcolorToInt(c[1], c[2]);
   int green = hexcolorToInt(c[3], c[4]);
   int blue = hexcolorToInt(c[5], c[6]);
-  preferences.putUInt("redVal_ew5", red);
-  preferences.putUInt("greenVal_ew5", green);
-  preferences.putUInt("blueVal_ew5", blue);
   redVal_ew5 = red;
   greenVal_ew5 = green;
   blueVal_ew5 = blue;
-  update_display();
+  changedvalues = true;
+  updatedevice = true;
 }
 
 
@@ -2427,19 +2487,19 @@ void colCallew5(Control* sender, int type) {
 // # GUI: Color change for Extra Word ew6:
 // ###########################################################################################################################################
 void colCallew6(Control* sender, int type) {
+  updatedevice = false;
+  delay(1000);
   sender->value.toUpperCase();
   char c[7];
   sender->value.toCharArray(c, 8);
   int red = hexcolorToInt(c[1], c[2]);
   int green = hexcolorToInt(c[3], c[4]);
   int blue = hexcolorToInt(c[5], c[6]);
-  preferences.putUInt("redVal_ew6", red);
-  preferences.putUInt("greenVal_ew6", green);
-  preferences.putUInt("blueVal_ew6", blue);
   redVal_ew6 = red;
   greenVal_ew6 = green;
   blueVal_ew6 = blue;
-  update_display();
+  changedvalues = true;
+  updatedevice = true;
 }
 
 
@@ -2447,19 +2507,19 @@ void colCallew6(Control* sender, int type) {
 // # GUI: Color change for Extra Word ew7:
 // ###########################################################################################################################################
 void colCallew7(Control* sender, int type) {
+  updatedevice = false;
+  delay(1000);
   sender->value.toUpperCase();
   char c[7];
   sender->value.toCharArray(c, 8);
   int red = hexcolorToInt(c[1], c[2]);
   int green = hexcolorToInt(c[3], c[4]);
   int blue = hexcolorToInt(c[5], c[6]);
-  preferences.putUInt("redVal_ew7", red);
-  preferences.putUInt("greenVal_ew7", green);
-  preferences.putUInt("blueVal_ew7", blue);
   redVal_ew7 = red;
   greenVal_ew7 = green;
   blueVal_ew7 = blue;
-  update_display();
+  changedvalues = true;
+  updatedevice = true;
 }
 
 
@@ -2467,19 +2527,19 @@ void colCallew7(Control* sender, int type) {
 // # GUI: Color change for Extra Word ew8:
 // ###########################################################################################################################################
 void colCallew8(Control* sender, int type) {
+  updatedevice = false;
+  delay(1000);
   sender->value.toUpperCase();
   char c[7];
   sender->value.toCharArray(c, 8);
   int red = hexcolorToInt(c[1], c[2]);
   int green = hexcolorToInt(c[3], c[4]);
   int blue = hexcolorToInt(c[5], c[6]);
-  preferences.putUInt("redVal_ew8", red);
-  preferences.putUInt("greenVal_ew8", green);
-  preferences.putUInt("blueVal_ew8", blue);
   redVal_ew8 = red;
   greenVal_ew8 = green;
   blueVal_ew8 = blue;
-  update_display();
+  changedvalues = true;
+  updatedevice = true;
 }
 
 
@@ -2487,19 +2547,19 @@ void colCallew8(Control* sender, int type) {
 // # GUI: Color change for Extra Word ew9:
 // ###########################################################################################################################################
 void colCallew9(Control* sender, int type) {
+  updatedevice = false;
+  delay(1000);
   sender->value.toUpperCase();
   char c[7];
   sender->value.toCharArray(c, 8);
   int red = hexcolorToInt(c[1], c[2]);
   int green = hexcolorToInt(c[3], c[4]);
   int blue = hexcolorToInt(c[5], c[6]);
-  preferences.putUInt("redVal_ew9", red);
-  preferences.putUInt("greenVal_ew9", green);
-  preferences.putUInt("blueVal_ew9", blue);
   redVal_ew9 = red;
   greenVal_ew9 = green;
   blueVal_ew9 = blue;
-  update_display();
+  changedvalues = true;
+  updatedevice = true;
 }
 
 
@@ -2507,19 +2567,19 @@ void colCallew9(Control* sender, int type) {
 // # GUI: Color change for Extra Word ew10:
 // ###########################################################################################################################################
 void colCallew10(Control* sender, int type) {
+  updatedevice = false;
+  delay(1000);
   sender->value.toUpperCase();
   char c[7];
   sender->value.toCharArray(c, 8);
   int red = hexcolorToInt(c[1], c[2]);
   int green = hexcolorToInt(c[3], c[4]);
   int blue = hexcolorToInt(c[5], c[6]);
-  preferences.putUInt("redVal_ew10", red);
-  preferences.putUInt("greenVal_ew10", green);
-  preferences.putUInt("blueVal_ew10", blue);
   redVal_ew10 = red;
   greenVal_ew10 = green;
   blueVal_ew10 = blue;
-  update_display();
+  changedvalues = true;
+  updatedevice = true;
 }
 
 
@@ -2527,19 +2587,19 @@ void colCallew10(Control* sender, int type) {
 // # GUI: Color change for Extra Word ew11:
 // ###########################################################################################################################################
 void colCallew11(Control* sender, int type) {
+  updatedevice = false;
+  delay(1000);
   sender->value.toUpperCase();
   char c[7];
   sender->value.toCharArray(c, 8);
   int red = hexcolorToInt(c[1], c[2]);
   int green = hexcolorToInt(c[3], c[4]);
   int blue = hexcolorToInt(c[5], c[6]);
-  preferences.putUInt("redVal_ew11", red);
-  preferences.putUInt("greenVal_ew11", green);
-  preferences.putUInt("blueVal_ew11", blue);
   redVal_ew11 = red;
   greenVal_ew11 = green;
   blueVal_ew11 = blue;
-  update_display();
+  changedvalues = true;
+  updatedevice = true;
 }
 
 
@@ -2547,19 +2607,19 @@ void colCallew11(Control* sender, int type) {
 // # GUI: Color change for Extra Word ew12:
 // ###########################################################################################################################################
 void colCallew12(Control* sender, int type) {
+  updatedevice = false;
+  delay(1000);
   sender->value.toUpperCase();
   char c[7];
   sender->value.toCharArray(c, 8);
   int red = hexcolorToInt(c[1], c[2]);
   int green = hexcolorToInt(c[3], c[4]);
   int blue = hexcolorToInt(c[5], c[6]);
-  preferences.putUInt("redVal_ew12", red);
-  preferences.putUInt("greenVal_ew12", green);
-  preferences.putUInt("blueVal_ew12", blue);
   redVal_ew12 = red;
   greenVal_ew12 = green;
   blueVal_ew12 = blue;
-  update_display();
+  changedvalues = true;
+  updatedevice = true;
 }
 
 
@@ -2567,13 +2627,11 @@ void colCallew12(Control* sender, int type) {
 // # GUI: Slider change for LED intensity: DAY
 // ###########################################################################################################################################
 void sliderBrightnessDay(Control* sender, int type) {
-  // Serial.print("Slider: ID: ");
-  // Serial.print(sender->id);
-  // Serial.print(", Value: ");
-  // Serial.println(sender->value);
-  preferences.putUInt("intensity_day", (sender->value).toInt());
+  updatedevice = false;
+  delay(1000);
   intensity_day = sender->value.toInt();
-  update_display();
+  changedvalues = true;
+  updatedevice = true;
 }
 
 
@@ -2581,13 +2639,11 @@ void sliderBrightnessDay(Control* sender, int type) {
 // # GUI: Slider change for LED intensity: NIGHT
 // ###########################################################################################################################################
 void sliderBrightnessNight(Control* sender, int type) {
-  // Serial.print("Slider: ID: ");
-  // Serial.print(sender->id);
-  // Serial.print(", Value: ");
-  // Serial.println(sender->value);
-  preferences.putUInt("intensity_night", (sender->value).toInt());
+  updatedevice = false;
+  delay(1000);
   intensity_night = sender->value.toInt();
-  update_display();
+  changedvalues = true;
+  updatedevice = true;
 }
 
 
@@ -2595,13 +2651,11 @@ void sliderBrightnessNight(Control* sender, int type) {
 // # GUI: Time Day Mode Start
 // ###########################################################################################################################################
 void call_day_time_start(Control* sender, int type) {
-  // Serial.print("Text: ID: ");
-  // Serial.print(sender->id);
-  // Serial.print(", Value: ");
-  // Serial.println(sender->value);
-  preferences.putUInt("day_time_start", (sender->value).toInt());
+  updatedevice = false;
+  delay(1000);
   day_time_start = sender->value.toInt();
-  update_display();
+  changedvalues = true;
+  updatedevice = true;
 }
 
 
@@ -2609,13 +2663,11 @@ void call_day_time_start(Control* sender, int type) {
 // # GUI: Time Day Mode Stop
 // ###########################################################################################################################################
 void call_day_time_stop(Control* sender, int type) {
-  // Serial.print("Text: ID: ");
-  // Serial.print(sender->id);
-  // Serial.print(", Value: ");
-  // Serial.println(sender->value);
-  preferences.putUInt("day_time_stop", (sender->value).toInt());
+  updatedevice = false;
+  delay(1000);
   day_time_stop = sender->value.toInt();
-  update_display();
+  changedvalues = true;
+  updatedevice = true;
 }
 
 
@@ -2649,9 +2701,6 @@ void handleNewMessages(int numNewMessages) {
         Serial.println(String("Message received from UNKNOWN Telegram user: " + chat_id + " ==> WordClock will NOT react to this message"));
         bot.sendMessage(CHAT_ID, "Message received from UNKNOWN Telegram user: " + chat_id + " ==> WordClock will NOT react to this message " + "\xE2\x9D\x97");
         break;
-      } else {
-        // Serial.println(String("Message received from known Telegram user ==> WordClock will react to this message"));
-        // bot.sendMessage(chat_id, "Message received from known Telegram user ==> WordClock will react to this message");
       }
     }
 
@@ -2670,8 +2719,7 @@ void handleNewMessages(int numNewMessages) {
           ew1 = 0;
           bot.sendMessage(chat_id, "ALARM text set inactive " + emoInactive);
         }
-        preferences.putUInt("ew1", ew1);
-        update_display();
+        changedvalues = true;
       }
 
       if (text == "/ew2") {
@@ -2682,8 +2730,7 @@ void handleNewMessages(int numNewMessages) {
           ew2 = 0;
           bot.sendMessage(chat_id, "GEBURTSTAG text set inactive " + emoInactive);
         }
-        preferences.putUInt("ew2", ew2);
-        update_display();
+        changedvalues = true;
       }
 
       if (text == "/ew3") {
@@ -2694,8 +2741,7 @@ void handleNewMessages(int numNewMessages) {
           ew3 = 0;
           bot.sendMessage(chat_id, "MÜLL RAUS BRINGEN text set inactive " + emoInactive);
         }
-        preferences.putUInt("ew3", ew3);
-        update_display();
+        changedvalues = true;
       }
 
       if (text == "/ew4") {
@@ -2706,8 +2752,7 @@ void handleNewMessages(int numNewMessages) {
           ew4 = 0;
           bot.sendMessage(chat_id, "AUTO text set inactive " + emoInactive);
         }
-        preferences.putUInt("ew4", ew4);
-        update_display();
+        changedvalues = true;
       }
 
       if (text == "/ew5") {
@@ -2718,8 +2763,7 @@ void handleNewMessages(int numNewMessages) {
           ew5 = 0;
           bot.sendMessage(chat_id, "FEIERTAG text set inactive " + emoInactive);
         }
-        preferences.putUInt("ew5", ew5);
-        update_display();
+        changedvalues = true;
       }
 
       if (text == "/ew6") {
@@ -2730,8 +2774,7 @@ void handleNewMessages(int numNewMessages) {
           ew6 = 0;
           bot.sendMessage(chat_id, "FORMEL1 text set inactive " + emoInactive);
         }
-        preferences.putUInt("ew6", ew6);
-        update_display();
+        changedvalues = true;
       }
 
       if (text == "/ew7") {
@@ -2742,8 +2785,7 @@ void handleNewMessages(int numNewMessages) {
           ew7 = 0;
           bot.sendMessage(chat_id, "GELBER SACK text set inactive " + emoInactive);
         }
-        preferences.putUInt("ew7", ew7);
-        update_display();
+        changedvalues = true;
       }
 
       if (text == "/ew8") {
@@ -2754,8 +2796,7 @@ void handleNewMessages(int numNewMessages) {
           ew8 = 0;
           bot.sendMessage(chat_id, "URLAUB text set inactive " + emoInactive);
         }
-        preferences.putUInt("ew8", ew8);
-        update_display();
+        changedvalues = true;
       }
 
       if (text == "/ew9") {
@@ -2766,8 +2807,7 @@ void handleNewMessages(int numNewMessages) {
           ew9 = 0;
           bot.sendMessage(chat_id, "WERKSTATT text set inactive " + emoInactive);
         }
-        preferences.putUInt("ew9", ew9);
-        update_display();
+        changedvalues = true;
       }
 
       if (text == "/ew10") {
@@ -2778,8 +2818,7 @@ void handleNewMessages(int numNewMessages) {
           ew10 = 0;
           bot.sendMessage(chat_id, "ZEIT ZUM ZOCKEN text set inactive " + emoInactive);
         }
-        preferences.putUInt("ew10", ew10);
-        update_display();
+        changedvalues = true;
       }
 
       if (text == "/ew11") {
@@ -2790,8 +2829,7 @@ void handleNewMessages(int numNewMessages) {
           ew11 = 0;
           bot.sendMessage(chat_id, "FRISEUR text set inactive " + emoInactive);
         }
-        preferences.putUInt("ew11", ew11);
-        update_display();
+        changedvalues = true;
       }
 
       if (text == "/ew12") {
@@ -2802,8 +2840,7 @@ void handleNewMessages(int numNewMessages) {
           ew12 = 0;
           bot.sendMessage(chat_id, "TERMIN text set inactive " + emoInactive);
         }
-        preferences.putUInt("ew12", ew12);
-        update_display();
+        changedvalues = true;
       }
 
       if (text == "/start") {
@@ -2825,8 +2862,7 @@ void handleNewMessages(int numNewMessages) {
           ew1 = 0;
           bot.sendMessage(chat_id, "COME HERE text set inactive " + emoInactive);
         }
-        preferences.putUInt("ew1", ew1);
-        update_display();
+        changedvalues = true;
       }
 
       if (text == "/ew2") {
@@ -2837,8 +2873,7 @@ void handleNewMessages(int numNewMessages) {
           ew2 = 0;
           bot.sendMessage(chat_id, "LUNCH TIME text set inactive " + emoInactive);
         }
-        preferences.putUInt("ew2", ew2);
-        update_display();
+        changedvalues = true;
       }
 
       if (text == "/ew3") {
@@ -2849,8 +2884,7 @@ void handleNewMessages(int numNewMessages) {
           ew3 = 0;
           bot.sendMessage(chat_id, "ALARM text set inactive " + emoInactive);
         }
-        preferences.putUInt("ew3", ew3);
-        update_display();
+        changedvalues = true;
       }
 
       if (text == "/ew4") {
@@ -2861,8 +2895,7 @@ void handleNewMessages(int numNewMessages) {
           ew4 = 0;
           bot.sendMessage(chat_id, "GARBAGE text set inactive " + emoInactive);
         }
-        preferences.putUInt("ew4", ew4);
-        update_display();
+        changedvalues = true;
       }
 
       if (text == "/ew5") {
@@ -2873,8 +2906,7 @@ void handleNewMessages(int numNewMessages) {
           ew5 = 0;
           bot.sendMessage(chat_id, "HOLIDAY text set inactive " + emoInactive);
         }
-        preferences.putUInt("ew5", ew5);
-        update_display();
+        changedvalues = true;
       }
 
       if (text == "/ew6") {
@@ -2885,8 +2917,7 @@ void handleNewMessages(int numNewMessages) {
           ew6 = 0;
           bot.sendMessage(chat_id, "TEMPERATURE text set inactive " + emoInactive);
         }
-        preferences.putUInt("ew6", ew6);
-        update_display();
+        changedvalues = true;
       }
 
       if (text == "/ew7") {
@@ -2897,8 +2928,7 @@ void handleNewMessages(int numNewMessages) {
           ew7 = 0;
           bot.sendMessage(chat_id, "DATE text set inactive " + emoInactive);
         }
-        preferences.putUInt("ew7", ew7);
-        update_display();
+        changedvalues = true;
       }
 
       if (text == "/ew8") {
@@ -2909,8 +2939,7 @@ void handleNewMessages(int numNewMessages) {
           ew8 = 0;
           bot.sendMessage(chat_id, "BIRTHDAY text set inactive " + emoInactive);
         }
-        preferences.putUInt("ew8", ew8);
-        update_display();
+        changedvalues = true;
       }
 
       if (text == "/ew9") {
@@ -2921,8 +2950,7 @@ void handleNewMessages(int numNewMessages) {
           ew9 = 0;
           bot.sendMessage(chat_id, "DOORBELL text set inactive " + emoInactive);
         }
-        preferences.putUInt("ew9", ew9);
-        update_display();
+        changedvalues = true;
       }
 
       if (text == "/start") {
@@ -3098,7 +3126,7 @@ void set_extra_words() {
 // ###########################################################################################################################################
 void setLEDexCol(int ledNrFrom, int ledNrTo, int switchOn, int exRed, int exGreen, int exBlue) {
   if (ledNrFrom > ledNrTo) {
-    setLED(ledNrTo, ledNrFrom, switchOn);  //sets LED numbers in correct order (because of the date programming below)
+    setLED(ledNrTo, ledNrFrom, switchOn);  // Sets LED numbers in correct order
   } else {
     for (int i = ledNrFrom; i <= ledNrTo; i++) {
       if ((i >= 0) && (i < NUMPIXELS))
@@ -3235,20 +3263,11 @@ void handleOTAupdate() {
       } else if (upload.status == UPLOAD_FILE_END) {
         if (Update.end(true)) {  //true to set the size to the current progress
           Serial.printf("Update Success: %u\nRebooting...\n", upload.totalSize);
-          back_color();
-          redVal_time = 0;
-          greenVal_time = 255;
-          blueVal_time = 0;
-          if (langLEDlayout == 0) {  // DE:
-            setLED(165, 172, 1);
-            setLED(52, 57, 1);
-          }
-          if (langLEDlayout == 1) {  // EN:
-            setLED(24, 28, 1);
-            setLED(120, 126, 1);
-          }
-          strip.show();
-          delay(3000);
+          Serial.println("Status: Restart request");
+          ResetTextLEDs(strip.Color(255, 0, 0));
+          delay(1000);
+          ResetTextLEDs(strip.Color(0, 255, 0));
+          delay(1000);
         } else {
           Update.printError(Serial);
         }
@@ -3262,9 +3281,8 @@ void handleOTAupdate() {
 // # Extra Words web update server:
 // ###########################################################################################################################################
 void handleExtraWords() {
-
   updatedevice = false;
-  // delay(1000);
+  delay(1000);
 
   // OTA update server pages urls:
   ewserver.on("/", HTTP_GET, []() {
@@ -3284,8 +3302,7 @@ void handleExtraWords() {
         ew1 = 0;
         ewserver.send(200, "text/html", "ALARM text set inactive");
       }
-      preferences.putUInt("ew1", ew1);
-      update_display();
+      changedvalues = true;
     });
 
 
@@ -3298,8 +3315,7 @@ void handleExtraWords() {
         ew2 = 0;
         ewserver.send(200, "text/html", "GEBURTSTAG text set inactive");
       }
-      preferences.putUInt("ew2", ew2);
-      update_display();
+      changedvalues = true;
     });
 
 
@@ -3312,8 +3328,7 @@ void handleExtraWords() {
         ew3 = 0;
         ewserver.send(200, "text/html", "MUELL RAUS BRINGEN text set inactive");
       }
-      preferences.putUInt("ew3", ew3);
-      update_display();
+      changedvalues = true;
     });
 
 
@@ -3326,8 +3341,7 @@ void handleExtraWords() {
         ew4 = 0;
         ewserver.send(200, "text/html", "AUTO text set inactive");
       }
-      preferences.putUInt("ew4", ew4);
-      update_display();
+      changedvalues = true;
     });
 
 
@@ -3340,8 +3354,7 @@ void handleExtraWords() {
         ew5 = 0;
         ewserver.send(200, "text/html", "FEIERTAG text set inactive");
       }
-      preferences.putUInt("ew5", ew5);
-      update_display();
+      changedvalues = true;
     });
 
 
@@ -3354,8 +3367,7 @@ void handleExtraWords() {
         ew6 = 0;
         ewserver.send(200, "text/html", "FORMEL1 text set inactive");
       }
-      preferences.putUInt("ew6", ew6);
-      update_display();
+      changedvalues = true;
     });
 
 
@@ -3368,8 +3380,7 @@ void handleExtraWords() {
         ew7 = 0;
         ewserver.send(200, "text/html", "GELBER SACK text set inactive");
       }
-      preferences.putUInt("ew7", ew7);
-      update_display();
+      changedvalues = true;
     });
 
 
@@ -3382,8 +3393,7 @@ void handleExtraWords() {
         ew8 = 0;
         ewserver.send(200, "text/html", "URLAUB text set inactive");
       }
-      preferences.putUInt("ew8", ew8);
-      update_display();
+      changedvalues = true;
     });
 
 
@@ -3396,8 +3406,7 @@ void handleExtraWords() {
         ew9 = 0;
         ewserver.send(200, "text/html", "WERKSTATT text set inactive");
       }
-      preferences.putUInt("ew9", ew9);
-      update_display();
+      changedvalues = true;
     });
 
 
@@ -3410,8 +3419,7 @@ void handleExtraWords() {
         ew10 = 0;
         ewserver.send(200, "text/html", "ZEIT ZUM ZOCKEN text set inactive");
       }
-      preferences.putUInt("ew10", ew10);
-      update_display();
+      changedvalues = true;
     });
 
 
@@ -3424,8 +3432,7 @@ void handleExtraWords() {
         ew11 = 0;
         ewserver.send(200, "text/html", "FRISEUR text set inactive");
       }
-      preferences.putUInt("ew11", ew11);
-      update_display();
+      changedvalues = true;
     });
 
 
@@ -3438,22 +3445,12 @@ void handleExtraWords() {
         ew12 = 0;
         ewserver.send(200, "text/html", "TERMIN text set inactive");
       }
-      preferences.putUInt("ew12", ew12);
-      update_display();
+      changedvalues = true;
     });
   }
 
   // ################################################################## EN:
   if (langLEDlayout == 1) {  // EN:
-    // ew1 - COME HERE text
-    // ew2 - LUNCH TIME text
-    // ew3 - ALARM text
-    // ew4 - GARBAGE text
-    // ew5 - HOLIDAY text
-    // ew6 - TEMPERATURE text
-    // ew7 - DATE text
-    // ew8 - BIRTHDAY text
-    // ew9 - DOORBELL text
 
     ewserver.on("/ew1", HTTP_GET, []() {
       ewserver.sendHeader("Connection", "close");
@@ -3464,8 +3461,7 @@ void handleExtraWords() {
         ew1 = 0;
         ewserver.send(200, "text/html", "COME HERE text set inactive");
       }
-      preferences.putUInt("ew1", ew1);
-      update_display();
+      changedvalues = true;
     });
 
 
@@ -3478,8 +3474,7 @@ void handleExtraWords() {
         ew2 = 0;
         ewserver.send(200, "text/html", "LUNCH TIME text set inactive");
       }
-      preferences.putUInt("ew2", ew2);
-      update_display();
+      changedvalues = true;
     });
 
 
@@ -3492,8 +3487,7 @@ void handleExtraWords() {
         ew3 = 0;
         ewserver.send(200, "text/html", "ALARM text set inactive");
       }
-      preferences.putUInt("ew3", ew3);
-      update_display();
+      changedvalues = true;
     });
 
 
@@ -3506,8 +3500,7 @@ void handleExtraWords() {
         ew4 = 0;
         ewserver.send(200, "text/html", "GARBAGE text set inactive");
       }
-      preferences.putUInt("ew4", ew4);
-      update_display();
+      changedvalues = true;
     });
 
 
@@ -3520,8 +3513,7 @@ void handleExtraWords() {
         ew5 = 0;
         ewserver.send(200, "text/html", "HOLIDAY text set inactive");
       }
-      preferences.putUInt("ew5", ew5);
-      update_display();
+      changedvalues = true;
     });
 
 
@@ -3534,8 +3526,7 @@ void handleExtraWords() {
         ew6 = 0;
         ewserver.send(200, "text/html", "TEMPERATURE text set inactive");
       }
-      preferences.putUInt("ew6", ew6);
-      update_display();
+      changedvalues = true;
     });
 
 
@@ -3548,8 +3539,8 @@ void handleExtraWords() {
         ew7 = 0;
         ewserver.send(200, "text/html", "DATE text set inactive");
       }
-      preferences.putUInt("ew7", ew7);
-      update_display();
+      changedvalues = true;
+      ;
     });
 
 
@@ -3562,8 +3553,7 @@ void handleExtraWords() {
         ew8 = 0;
         ewserver.send(200, "text/html", "BIRTHDAY text set inactive");
       }
-      preferences.putUInt("ew8", ew8);
-      update_display();
+      changedvalues = true;
     });
 
 
@@ -3576,13 +3566,11 @@ void handleExtraWords() {
         ew9 = 0;
         ewserver.send(200, "text/html", "DOORBELL text set inactive");
       }
-      preferences.putUInt("ew9", ew9);
-      update_display();
+      changedvalues = true;
     });
   }
 
   ewserver.begin();
-
   updatedevice = true;
 }
 
