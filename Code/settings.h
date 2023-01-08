@@ -6,7 +6,7 @@
 // #
 // # Released under license: GNU General Public License v3.0: https://github.com/AWSW-de/WordClock-16x16-LED-matrix/blob/main/LICENSE
 // #
-// # Compatible with WordClock version: V1.1.0
+// # Compatible with WordClock version: V1.2.0
 // #
 // ###########################################################################################################################################
 /*
@@ -36,7 +36,7 @@ Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUMPIXELS, LEDPIN, NEO_GRB + NEO_KHZ
 // ###########################################################################################################################################
 // # LED language layout default: !!! SET YOUR DEFAULT LANGUAGE HERE !!!
 // ###########################################################################################################################################
-int langLEDlayout_default = 1;  // LED language layout default (0 = DE; 1 = EN)
+int langLEDlayout_default = 1;  // LED language layout default (0 = DE; 1 = EN, 2 = NL)
 // NOTE: You may need to use the "Reset WordClock settings"-button to update the value on the device
 
 
@@ -111,7 +111,6 @@ int ew12_default = 0;  // Extra Word 12
 // # Various default settings:
 // ###########################################################################################################################################
 #define AP_TIMEOUT 240          // Timeout in seconds for AP / WLAN config
-int useledtest_default = 1;     // Show start animation and display test at boot
 int useshowip_default = 1;      // Show the current ip at boot
 int useTelegram_default = 0;    // Use Telegram support
 int useTelegramID_default = 0;  // React to your own Telegram CHAT_ID only
@@ -165,6 +164,7 @@ String emoInactive = "\xF0\x9F\x91\x8E";
 // - Select "Edit Commands"
 // - Follow the instruction to set up the menu entries - example (send without the "/* DE:" and "*/" or "/* EN:" and "*/" ):
 
+
 /* DE:
 
 
@@ -202,6 +202,25 @@ ew9 - DOORBELL text
 
 
 */
+
+
+/* NL:
+
+
+start - WordClock Telegram welcome message
+ew1 - KOM HIER text
+ew2 - LUNCH TIJD text
+ew3 - ALARM text
+ew4 - AFVAL text
+ew5 - VAKANTIE text
+ew6 - TEMPERATUUR text
+ew7 - DATUM text
+ew8 - VERJAARDAG text
+ew9 - DEURBELL text
+
+
+*/
+
 
 // ###########################################################################################################################################
 
