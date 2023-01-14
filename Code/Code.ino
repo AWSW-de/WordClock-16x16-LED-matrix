@@ -59,7 +59,7 @@
 // ###########################################################################################################################################
 // # Version number of the code:
 // ###########################################################################################################################################
-const char* WORD_CLOCK_VERSION = "V1.2.0";
+const char* WORD_CLOCK_VERSION = "V1.3.0";
 
 
 // ###########################################################################################################################################
@@ -501,6 +501,84 @@ void setupWebInterface() {
     ESPUI.setInputType(text_colour_ew9, "color");
   }
 
+  // ################################################################## FR:
+  if (langLEDlayout == 3) {  // FR:
+
+    // ew1 - ALARME text
+    // ew2 - ANNIVERSAIRE text
+    // ew3 - POUBELLE text
+    // ew4 - A TABLE text
+    // ew5 - VACANCES text
+    // ew6 - VIENS ICI text
+    // ew7 - SONNETTE text
+    // ew8 - TEMPERATURE text
+    // ew9 - DATE text
+
+    // Color Extra Word ew1:
+    char hex_ew1[7] = { 0 };
+    sprintf(hex_ew1, "#%02X%02X%02X", redVal_ew1, greenVal_ew1, blueVal_ew1);
+    uint16_t text_colour_ew1;
+    text_colour_ew1 = ESPUI.text("ALARME", colCallew1, ControlColor::Dark, hex_ew1);
+    ESPUI.setInputType(text_colour_ew1, "color");
+
+    // Color Extra Word ew2:
+    char hex_ew2[7] = { 0 };
+    sprintf(hex_ew2, "#%02X%02X%02X", redVal_ew2, greenVal_ew2, blueVal_ew2);
+    uint16_t text_colour_ew2;
+    text_colour_ew2 = ESPUI.text("ANNIVERSAIRE", colCallew2, ControlColor::Dark, hex_ew2);
+    ESPUI.setInputType(text_colour_ew2, "color");
+
+    // Color Extra Word ew3:
+    char hex_ew3[7] = { 0 };
+    sprintf(hex_ew3, "#%02X%02X%02X", redVal_ew3, greenVal_ew3, blueVal_ew3);
+    uint16_t text_colour_ew3;
+    text_colour_ew3 = ESPUI.text("POUBELLE", colCallew3, ControlColor::Dark, hex_ew3);
+    ESPUI.setInputType(text_colour_ew3, "color");
+
+    // Color Extra Word ew4:
+    char hex_ew4[7] = { 0 };
+    sprintf(hex_ew4, "#%02X%02X%02X", redVal_ew4, greenVal_ew4, blueVal_ew4);
+    uint16_t text_colour_ew4;
+    text_colour_ew4 = ESPUI.text("A TABLE", colCallew4, ControlColor::Dark, hex_ew4);
+    ESPUI.setInputType(text_colour_ew4, "color");
+
+    // Color Extra Word ew5:
+    char hex_ew5[7] = { 0 };
+    sprintf(hex_ew5, "#%02X%02X%02X", redVal_ew5, greenVal_ew5, blueVal_ew5);
+    uint16_t text_colour_ew5;
+    text_colour_ew5 = ESPUI.text("VACANCES", colCallew5, ControlColor::Dark, hex_ew5);
+    ESPUI.setInputType(text_colour_ew5, "color");
+
+    // Color Extra Word ew6:
+    char hex_ew6[7] = { 0 };
+    sprintf(hex_ew6, "#%02X%02X%02X", redVal_ew6, greenVal_ew6, blueVal_ew6);
+    uint16_t text_colour_ew6;
+    text_colour_ew6 = ESPUI.text("VIENS ICI", colCallew6, ControlColor::Dark, hex_ew6);
+    ESPUI.setInputType(text_colour_ew6, "color");
+
+    // Color Extra Word ew7:
+    char hex_ew7[7] = { 0 };
+    sprintf(hex_ew7, "#%02X%02X%02X", redVal_ew7, greenVal_ew7, blueVal_ew7);
+    uint16_t text_colour_ew7;
+    text_colour_ew7 = ESPUI.text("SONNETTE", colCallew7, ControlColor::Dark, hex_ew7);
+    ESPUI.setInputType(text_colour_ew7, "color");
+
+    // Color Extra Word ew8:
+    char hex_ew8[7] = { 0 };
+    sprintf(hex_ew8, "#%02X%02X%02X", redVal_ew8, greenVal_ew8, blueVal_ew8);
+    uint16_t text_colour_ew8;
+    text_colour_ew8 = ESPUI.text("TEMPERATURE", colCallew8, ControlColor::Dark, hex_ew8);
+    ESPUI.setInputType(text_colour_ew8, "color");
+
+    // Color Extra Word ew9:
+    char hex_ew9[7] = { 0 };
+    sprintf(hex_ew9, "#%02X%02X%02X", redVal_ew9, greenVal_ew9, blueVal_ew9);
+    uint16_t text_colour_ew9;
+    text_colour_ew9 = ESPUI.text("DATE", colCallew9, ControlColor::Dark, hex_ew9);
+    ESPUI.setInputType(text_colour_ew9, "color");
+  }
+
+
   // Section WiFi:
   // #############
   ESPUI.separator("WiFi:");
@@ -855,6 +933,10 @@ void buttonWordClockReset(Control* sender, int type, void* param) {
           setLED(117, 125, 1);
           setLED(27, 31, 1);
         }
+        if (langLEDlayout == 3) {  // FR:
+          setLED(198, 206, 1);
+          setLED(101, 111, 1);
+        }
         strip.show();
         Serial.println("####################################################################################################");
         Serial.println("# WORDCLOCK SETTING WERE SET TO DEFAULT... WORDCLOCK WILL NOW RESTART... PLEASE CONFIGURE AGAIN... #");
@@ -881,6 +963,10 @@ void buttonWordClockReset(Control* sender, int type, void* param) {
           setLED(117, 125, 1);
           setLED(27, 31, 1);
         }
+        if (langLEDlayout == 3) {  // FR:
+          setLED(198, 206, 1);
+          setLED(101, 111, 1);
+        }
         strip.show();
         delay(1000);
         WordClockResetCounter = WordClockResetCounter + 1;
@@ -905,7 +991,8 @@ void buttonlangChange(Control* sender, int type, void* param) {
         Serial.println("WORDCLOCK LAYOUT LANGUAGE CHANGE EXECUTED");
         if (langLEDlayout == 0) preferences.putUInt("langLEDlayout", 1);  // DE to EN
         if (langLEDlayout == 1) preferences.putUInt("langLEDlayout", 2);  // EN to NL
-        if (langLEDlayout == 2) preferences.putUInt("langLEDlayout", 0);  // NL to DE
+        if (langLEDlayout == 2) preferences.putUInt("langLEDlayout", 3);  // NL to FR
+        if (langLEDlayout == 3) preferences.putUInt("langLEDlayout", 0);  // FR to DE
         delay(1000);
         preferences.end();
         back_color();
@@ -920,6 +1007,9 @@ void buttonlangChange(Control* sender, int type, void* param) {
         }
         if (langLEDlayout == 2) {  // NL: HERSTART
           setLED(96, 103, 1);
+        }
+        if (langLEDlayout == 3) {  // FR: REDEMARRAGE
+          setLED(101, 111, 1);
         }
         strip.show();
         Serial.println("##########################################################################");
@@ -943,6 +1033,9 @@ void buttonlangChange(Control* sender, int type, void* param) {
         }
         if (langLEDlayout == 2) {  // NL: HERSTART
           setLED(96, 103, 1);
+        }
+        if (langLEDlayout == 3) {  // FR: REDEMARRAGE
+          setLED(101, 111, 1);
         }
         strip.show();
         delay(1000);
@@ -1560,6 +1653,10 @@ void ResetTextLEDs(uint32_t color) {
     setLEDcol(96, 103, color);  // HERSTART
   }
 
+  if (langLEDlayout == 3) {  // FR:
+    setLED(101, 111, 1);     //  REDEMARRAGE
+  }
+
   strip.show();
   delay(1000);
 }
@@ -1596,6 +1693,7 @@ void buttonUpdate(Control* sender, int type, void* param) {
   if (langLEDlayout == 0) setLED(52, 57, 1);  // DE
   if (langLEDlayout == 1) setLED(48, 53, 1);  // EN
   if (langLEDlayout == 2) setLED(16, 21, 1);  // NL
+  if (langLEDlayout == 3) setLED(0, 13, 1);   // FR
   strip.show();
   ESPUI.print(statusLabelID, "Update requested");
   ESPUI.updateButton(sender->id, "Update mode active now - Use the update url: >>>");
@@ -1727,14 +1825,14 @@ void update_display() {
     show_time(iHour, iMinute);
   } else {  // TEST THE DISPLAY TIME OUTPUT:
     strip.setBrightness(33);
-    for (int i = 0; i <= 12; i++) {  // 12 hours only:
+    for (int i = 0; i <= 12; i++) {  // 12 hours only to show all hour texts
       show_time(i, 0);
-      delay(1000);
+      delay(500);
     }
-    for (int i = 0; i <= 3; i++) {  // Hours 0 to 3 with all minute texts:
+    for (int i = 0; i <= 23; i++) {  // Hours 0 to 23 with all hour and minute texts:
       for (int y = 0; y < 60; y++) {
         show_time(i, y);
-        delay(500);
+        delay(5);
       }
     }
   }
@@ -1766,7 +1864,7 @@ void show_time(int hours, int minutes) {
 
   // Test a special time:
   // iHour = 23;
-  // iMinute = 45;
+  // iMinute = 35;
 
 
   // divide minute by 5 to get value for display control
@@ -2105,6 +2203,142 @@ void show_time(int hours, int minutes) {
   }
 
 
+
+  // ########################################################### FR:
+  if (langLEDlayout == 3) {  // FR:
+
+    // IL EST:
+    setLED(14, 15, 1);  // IL
+    setLED(21, 23, 1);  // EST
+
+    // CINQ: (Minutes) x:05, x:25, x:35, x:55
+    if ((minDiv == 1) || (minDiv == 5) || (minDiv == 7) || (minDiv == 11)) {
+      setLED(214, 217, 1);
+    }
+    // ET QUART: x:15,
+    if ((minDiv == 3)) {
+      setLED(153, 154, 1);  // ET
+      setLED(176, 180, 1);  // QUART
+    }
+    // LE QUART: x:45
+    if ((minDiv == 9)) {
+      setLED(160, 161, 1);  // LE
+      setLED(176, 180, 1);  // QUART
+    }
+    // DIX: (Minutes) x:10, x:50
+    if ((minDiv == 2) || (minDiv == 10)) {
+      setLED(181, 183, 1);
+    }
+    // VINGT: x:20, x:40
+    if ((minDiv == 4) || (minDiv == 8)) {
+      setLED(208, 212, 1);
+    }
+    // VINGT-: x:25, x:35
+    if ((minDiv == 5) || (minDiv == 7)) {
+      setLED(208, 213, 1);
+    }
+    // MOINS: x:35, x:40 x:45, x:50, x:55
+    if ((minDiv == 7) || (minDiv == 8) || (minDiv == 9) || (minDiv == 10) || (minDiv == 11)) {
+      setLED(155, 159, 1);
+    }
+    // ET DEMIE: x:30
+    if ((minDiv == 6)) {
+      setLED(153, 154, 1);  // ET
+      setLED(192, 196, 1);  // DEMIE
+    }
+
+
+    //set hour from 1 to 12 (at noon, or midnight)
+    int xHour = (iHour % 12);
+    if (xHour == 0)
+      xHour = 12;
+    // at minute 35 hour needs to be counted up:
+    if (iMinute >= 35) {
+      if (xHour == 12)
+        xHour = 1;
+      else
+        xHour++;
+    }
+
+
+    switch (xHour) {
+      case 1:
+        {
+          setLED(52, 54, 1);    // UNE
+          setLED(129, 133, 1);  // HEURE
+          break;
+        }
+      case 2:
+        {
+          setLED(117, 120, 1);  // DEUX
+          setLED(128, 133, 1);  // HEURES
+          break;
+        }
+      case 3:
+        {
+          setLED(65, 69, 1);    // TROIS
+          setLED(128, 133, 1);  // HEURES
+          break;
+        }
+      case 4:
+        {
+          setLED(55, 60, 1);    // QUATRE
+          setLED(128, 133, 1);  // HEURES
+          break;
+        }
+      case 5:
+        {
+          setLED(48, 51, 1);    // CINQ
+          setLED(128, 133, 1);  // HEURES
+          break;
+        }
+      case 6:
+        {
+          setLED(45, 47, 1);    // SIX
+          setLED(128, 133, 1);  // HEURES
+          break;
+        }
+      case 7:
+        {
+          setLED(88, 91, 1);    // SEPT
+          setLED(128, 133, 1);  // HEURES
+          break;
+        }
+      case 8:
+        {
+          setLED(139, 142, 1);  // HUIT
+          setLED(128, 133, 1);  // HEURES
+          break;
+        }
+      case 9:
+        {
+          setLED(70, 73, 1);    // NEUF
+          setLED(128, 133, 1);  // HEURES
+          break;
+        }
+      case 10:
+        {
+          setLED(61, 63, 1);    // DIX
+          setLED(128, 133, 1);  // HEURES
+          break;
+        }
+      case 11:
+        {
+          setLED(135, 138, 1);  // ONZE
+          setLED(128, 133, 1);  // HEURES
+          break;
+        }
+      case 12:
+        {
+          // MINUIT (0) or MIDI (12)
+          if (iHour == 0 || (iHour == 23 && iMinute >= 35)) setLED(74, 79, 1);   // MINUIT (0)
+          if (iHour == 12 || (iHour == 11 && iMinute >= 35)) setLED(80, 83, 1);  // MIDI (12)
+          break;
+        }
+    }
+  }
+
+
   // Handle extra words:
   set_extra_words();
 
@@ -2147,7 +2381,7 @@ void showMinutes(int minutes) {
       case 4:
         {
           setLED(241, 241, 1);  // +
-          setLED(245, 245, 1);  // 3
+          setLED(245, 245, 1);  // 4
           setLED(248, 254, 1);  // MINUTEN
           break;
         }
@@ -2181,7 +2415,7 @@ void showMinutes(int minutes) {
       case 4:
         {
           setLED(241, 241, 1);  // +
-          setLED(246, 246, 1);  // 3
+          setLED(246, 246, 1);  // 4
           setLED(248, 254, 1);  // MINUTEN
           break;
         }
@@ -2222,8 +2456,41 @@ void showMinutes(int minutes) {
         }
     }
   }
-}
 
+  // ##################################################### FR:
+  if (langLEDlayout == 3) {  // FR:
+    switch (minMod) {
+      case 1:
+        {
+          setLED(241, 241, 1);  // +
+          setLED(243, 243, 1);  // 1
+          setLED(248, 253, 1);  // MINUTE
+          break;
+        }
+      case 2:
+        {
+          setLED(241, 241, 1);  // +
+          setLED(244, 244, 1);  // 2
+          setLED(248, 254, 1);  // MINUTES
+          break;
+        }
+      case 3:
+        {
+          setLED(241, 241, 1);  // +
+          setLED(245, 245, 1);  // 3
+          setLED(248, 254, 1);  // MINUTES
+          break;
+        }
+      case 4:
+        {
+          setLED(241, 241, 1);  // +
+          setLED(246, 246, 1);  // 4
+          setLED(248, 254, 1);  // MINUTES
+          break;
+        }
+    }
+  }
+}
 
 // ###########################################################################################################################################
 // # Startup function:
@@ -2267,6 +2534,18 @@ void startup() {
     }
   }
 
+
+  if (langLEDlayout == 3) {  // FR:
+    strip.setPixelColor(92, c1);
+    strip.setPixelColor(93, c1);
+    strip.setPixelColor(94, c1);
+    strip.setPixelColor(95, c1);
+    for (uint16_t i = 198; i < 207; i++) {
+      strip.setPixelColor(i, c1);
+    }
+  }
+
+
   SetWLAN(strip.Color(0, 0, 255));  // Show WLAN text
 }
 
@@ -2307,6 +2586,12 @@ void SetWLAN(uint32_t color) {
     }
   }
 
+  if (langLEDlayout == 3) {  // FR:
+    for (uint16_t i = 231; i < 235; i++) {
+      strip.setPixelColor(i, color);
+    }
+  }
+
   strip.show();
 }
 
@@ -2343,6 +2628,12 @@ void WIFI_login() {
         strip.setPixelColor(i, strip.Color(0, 255, 0));
       }
     }
+    if (langLEDlayout == 3) {  // FR:
+      for (uint16_t i = 227; i < 229; i++) {
+        strip.setPixelColor(i, strip.Color(0, 255, 0));
+      }
+    }
+
     SetWLAN(strip.Color(0, 255, 0));
     delay(1000);
   }
@@ -2422,6 +2713,10 @@ void initTime(String timezone) {
       setLEDexCol(76, 79, 1, 255, 0, 0);
       setLEDexCol(96, 103, 1, 255, 0, 0);
     }
+    if (langLEDlayout == 3) {  // FR:
+      setLEDexCol(235, 239, 1, 255, 0, 0);
+      setLEDexCol(101, 111, 1, 255, 0, 0);
+    }
     strip.show();
     delay(3000);
     ESP.restart();
@@ -2436,6 +2731,9 @@ void initTime(String timezone) {
     }
     if (langLEDlayout == 2) {  // NL:
       setLEDexCol(76, 79, 1, 0, 255, 0);
+    }
+    if (langLEDlayout == 3) {  // FR:
+      setLEDexCol(235, 239, 1, 0, 255, 0);
     }
     strip.show();
     delay(1000);
@@ -3258,6 +3556,115 @@ void handleNewMessages(int numNewMessages) {
         bot.sendMessage(chat_id, welcome);
       }
     }
+
+    // ################################################################## FR:
+    if (langLEDlayout == 3) {  // FR:
+      if (text == "/ew1") {
+        if (ew1 == 0) {
+          ew1 = 1;
+          bot.sendMessage(chat_id, "ALARME text set active " + emoActive);
+        } else {
+          ew1 = 0;
+          bot.sendMessage(chat_id, "ALARME text set inactive " + emoInactive);
+        }
+        changedvalues = true;
+      }
+
+      if (text == "/ew2") {
+        if (ew2 == 0) {
+          ew2 = 1;
+          bot.sendMessage(chat_id, "ANNIVERSAIRE text set active " + emoActive);
+        } else {
+          ew2 = 0;
+          bot.sendMessage(chat_id, "ANNIVERSAIRE text set inactive " + emoInactive);
+        }
+        changedvalues = true;
+      }
+
+      if (text == "/ew3") {
+        if (ew3 == 0) {
+          ew3 = 1;
+          bot.sendMessage(chat_id, "POUBELLE text set active " + emoActive);
+        } else {
+          ew3 = 0;
+          bot.sendMessage(chat_id, "POUBELLE text set inactive " + emoInactive);
+        }
+        changedvalues = true;
+      }
+
+      if (text == "/ew4") {
+        if (ew4 == 0) {
+          ew4 = 1;
+          bot.sendMessage(chat_id, "A TABLE text set active " + emoActive);
+        } else {
+          ew4 = 0;
+          bot.sendMessage(chat_id, "A TABLE text set inactive " + emoInactive);
+        }
+        changedvalues = true;
+      }
+
+      if (text == "/ew5") {
+        if (ew5 == 0) {
+          ew5 = 1;
+          bot.sendMessage(chat_id, "VACANCES text set active " + emoActive);
+        } else {
+          ew5 = 0;
+          bot.sendMessage(chat_id, "VACANCES text set inactive " + emoInactive);
+        }
+        changedvalues = true;
+      }
+
+      if (text == "/ew6") {
+        if (ew6 == 0) {
+          ew6 = 1;
+          bot.sendMessage(chat_id, "VIENS ICI text set active " + emoActive);
+        } else {
+          ew6 = 0;
+          bot.sendMessage(chat_id, "VIENS ICI text set inactive " + emoInactive);
+        }
+        changedvalues = true;
+      }
+
+      if (text == "/ew7") {
+        if (ew7 == 0) {
+          ew7 = 1;
+          bot.sendMessage(chat_id, "SONNETTE text set active " + emoActive);
+        } else {
+          ew7 = 0;
+          bot.sendMessage(chat_id, "SONNETTE text set inactive " + emoInactive);
+        }
+        changedvalues = true;
+      }
+
+      if (text == "/ew8") {
+        if (ew8 == 0) {
+          ew8 = 1;
+          bot.sendMessage(chat_id, "TEMPERATURE text set active " + emoActive);
+        } else {
+          ew8 = 0;
+          bot.sendMessage(chat_id, "TEMPERATURE text set inactive " + emoInactive);
+        }
+        changedvalues = true;
+      }
+
+      if (text == "/ew9") {
+        if (ew9 == 0) {
+          ew9 = 1;
+          bot.sendMessage(chat_id, "DATE text set active " + emoActive);
+        } else {
+          ew9 = 0;
+          bot.sendMessage(chat_id, "DATE text set inactive " + emoInactive);
+        }
+        changedvalues = true;
+      }
+
+      if (text == "/start") {
+        String welcome = "Welcome to WordClock Telegram bot, " + from_name + ". " + "\xF0\x9F\x98\x8A" + "\n";
+        welcome += "This is a WordClock chat action test message.\n\n";
+        welcome += "Use /ew1, /ew2, /ew3, /ew4, /ew5, /ew6, /ew7, /ew8, /ew9 or the menu to set the extra words.\n\n";
+        bot.sendMessage(chat_id, welcome);
+      }
+    }
   }
 
   updatedevice = true;
@@ -3488,6 +3895,79 @@ void set_extra_words() {
       setLEDexCol(33, 39, 1, redVal_ew9, greenVal_ew9, blueVal_ew9);  // ew9 - DEURBELL text
     } else {
       setLED(33, 39, 0);  // ew9 - DEURBELL text
+    }
+  }
+
+  // ########################################################### FR:
+  if (langLEDlayout == 3) {  // FR:
+
+    // ew1 - ALARME text
+    // ew2 - ANNIVERSAIRE text
+    // ew3 - POUBELLE text
+    // ew4 - A TABLE text
+    // ew5 - VACANCES text
+    // ew6 - VIENS ICI text
+    // ew7 - SONNETTE text
+    // ew8 - TEMPERATURE text
+    // ew9 - DATE text
+
+    if (ew1 == 1) {
+      setLEDexCol(122, 127, 1, redVal_ew1, greenVal_ew1, blueVal_ew1);  // ew1
+    } else {
+      setLED(122, 127, 0);  // ew1
+    }
+
+    if (ew2 == 1) {
+      setLEDexCol(32, 43, 1, redVal_ew2, greenVal_ew2, blueVal_ew2);  // ew2
+    } else {
+      setLED(32, 43, 0);  // ew2
+    }
+
+    if (ew3 == 1) {
+      setLEDexCol(24, 31, 1, redVal_ew3, greenVal_ew3, blueVal_ew3);  // ew3
+
+    } else {
+      setLED(24, 31, 0);  // ew3
+    }
+
+    if (ew4 == 1) {
+      setLEDexCol(92, 92, 1, redVal_ew4, greenVal_ew4, blueVal_ew4);    // ew4
+      setLEDexCol(219, 223, 1, redVal_ew4, greenVal_ew4, blueVal_ew4);  // ew4
+    } else {
+      setLED(92, 92, 0);    // ew4
+      setLED(219, 223, 0);  // ew4
+    }
+
+    if (ew5 == 1) {
+      setLEDexCol(184, 191, 1, redVal_ew5, greenVal_ew5, blueVal_ew5);  // ew5
+    } else {
+      setLED(184, 191, 0);  // ew5
+    }
+
+    if (ew6 == 1) {
+      setLEDexCol(112, 116, 1, redVal_ew6, greenVal_ew6, blueVal_ew6);  // ew6
+      setLEDexCol(224, 226, 1, redVal_ew6, greenVal_ew6, blueVal_ew6);  // ew6
+    } else {
+      setLED(112, 116, 0);  // ew6
+      setLED(224, 226, 0);  // ew6
+    }
+
+    if (ew7 == 1) {
+      setLEDexCol(144, 151, 1, redVal_ew7, greenVal_ew7, blueVal_ew7);  // ew7
+    } else {
+      setLED(144, 151, 0);  // ew7
+    }
+
+    if (ew8 == 1) {
+      setLEDexCol(164, 174, 1, redVal_ew8, greenVal_ew8, blueVal_ew8);  // ew8
+    } else {
+      setLED(164, 174, 0);  // ew8
+    }
+
+    if (ew9 == 1) {
+      setLEDexCol(84, 87, 1, redVal_ew9, greenVal_ew9, blueVal_ew9);  // ew9
+    } else {
+      setLED(84, 87, 0);  // ew9
     }
   }
 }
@@ -3942,7 +4422,6 @@ void handleExtraWords() {
     });
   }
 
-
   // ################################################################## NL:
   if (langLEDlayout == 2) {  // NL:
 
@@ -4073,6 +4552,139 @@ void handleExtraWords() {
       changedvalues = true;
     });
   }
+
+  // ################################################################## FR:
+  if (langLEDlayout == 3) {  // FR:
+
+    // ew1 - ALARME text
+    // ew2 - ANNIVERSAIRE text
+    // ew3 - POUBELLE text
+    // ew4 - A TABLE text
+    // ew5 - VACANCES text
+    // ew6 - VIENS ICI text
+    // ew7 - SONNETTE text
+    // ew8 - TEMPERATURE text
+    // ew9 - DATE text
+
+    ewserver.on("/ew1", HTTP_GET, []() {
+      ewserver.sendHeader("Connection", "close");
+      if (ew1 == 0) {
+        ew1 = 1;
+        ewserver.send(200, "text/html", "ALARME text set active");
+      } else {
+        ew1 = 0;
+        ewserver.send(200, "text/html", "ALARME text set inactive");
+      }
+      changedvalues = true;
+    });
+
+
+    ewserver.on("/ew2", HTTP_GET, []() {
+      ewserver.sendHeader("Connection", "close");
+      if (ew2 == 0) {
+        ew2 = 1;
+        ewserver.send(200, "text/html", "ANNIVERSAIRE text set active");
+      } else {
+        ew2 = 0;
+        ewserver.send(200, "text/html", "ANNIVERSAIRE text set inactive");
+      }
+      changedvalues = true;
+    });
+
+
+    ewserver.on("/ew3", HTTP_GET, []() {
+      ewserver.sendHeader("Connection", "close");
+      if (ew3 == 0) {
+        ew3 = 1;
+        ewserver.send(200, "text/html", "POUBELLE text set active");
+      } else {
+        ew3 = 0;
+        ewserver.send(200, "text/html", "POUBELLE text set inactive");
+      }
+      changedvalues = true;
+    });
+
+
+    ewserver.on("/ew4", HTTP_GET, []() {
+      ewserver.sendHeader("Connection", "close");
+      if (ew4 == 0) {
+        ew4 = 1;
+        ewserver.send(200, "text/html", "A TABLE text set active");
+      } else {
+        ew4 = 0;
+        ewserver.send(200, "text/html", "A TABLE text set inactive");
+      }
+      changedvalues = true;
+    });
+
+
+    ewserver.on("/ew5", HTTP_GET, []() {
+      ewserver.sendHeader("Connection", "close");
+      if (ew5 == 0) {
+        ew5 = 1;
+        ewserver.send(200, "text/html", "VACANCES text set active");
+      } else {
+        ew5 = 0;
+        ewserver.send(200, "text/html", "VACANCES text set inactive");
+      }
+      changedvalues = true;
+    });
+
+
+    ewserver.on("/ew6", HTTP_GET, []() {
+      ewserver.sendHeader("Connection", "close");
+      if (ew6 == 0) {
+        ew6 = 1;
+        ewserver.send(200, "text/html", "VIENS ICI text set active");
+      } else {
+        ew6 = 0;
+        ewserver.send(200, "text/html", "VIENS ICI text set inactive");
+      }
+      changedvalues = true;
+    });
+
+
+    ewserver.on("/ew7", HTTP_GET, []() {
+      ewserver.sendHeader("Connection", "close");
+      if (ew7 == 0) {
+        ew7 = 1;
+        ewserver.send(200, "text/html", "SONNETTE text set active");
+      } else {
+        ew7 = 0;
+        ewserver.send(200, "text/html", "SONNETTE text set inactive");
+      }
+      changedvalues = true;
+      ;
+    });
+
+
+    ewserver.on("/ew8", HTTP_GET, []() {
+      ewserver.sendHeader("Connection", "close");
+      if (ew8 == 0) {
+        ew8 = 1;
+        ewserver.send(200, "text/html", "TEMPERATURE text set active");
+      } else {
+        ew8 = 0;
+        ewserver.send(200, "text/html", "TEMPERATURE text set inactive");
+      }
+      changedvalues = true;
+    });
+
+
+    ewserver.on("/ew9", HTTP_GET, []() {
+      ewserver.sendHeader("Connection", "close");
+      if (ew9 == 0) {
+        ew9 = 1;
+        ewserver.send(200, "text/html", "DATE text set active");
+      } else {
+        ew9 = 0;
+        ewserver.send(200, "text/html", "DATE text set inactive");
+      }
+      changedvalues = true;
+    });
+  }
+
+
 
   ewserver.begin();
   updatedevice = true;

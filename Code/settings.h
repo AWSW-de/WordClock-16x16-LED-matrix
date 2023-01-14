@@ -6,7 +6,7 @@
 // #
 // # Released under license: GNU General Public License v3.0: https://github.com/AWSW-de/WordClock-16x16-LED-matrix/blob/main/LICENSE
 // #
-// # Compatible with WordClock version: V1.2.0
+// # Compatible with WordClock version: V1.3.0
 // #
 // ###########################################################################################################################################
 /*
@@ -36,7 +36,7 @@ Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUMPIXELS, LEDPIN, NEO_GRB + NEO_KHZ
 // ###########################################################################################################################################
 // # LED language layout default: !!! SET YOUR DEFAULT LANGUAGE HERE !!!
 // ###########################################################################################################################################
-int langLEDlayout_default = 1;  // LED language layout default (0 = DE; 1 = EN, 2 = NL)
+int langLEDlayout_default = 0;  // LED language layout default (0 = DE; 1 = EN, 2 = NL, 3 = FR)
 // NOTE: You may need to use the "Reset WordClock settings"-button to update the value on the device
 
 
@@ -162,7 +162,7 @@ String emoInactive = "\xF0\x9F\x91\x8E";
 // - Select your bot
 // - Select "Edit bot"
 // - Select "Edit Commands"
-// - Follow the instruction to set up the menu entries - example (send without the "/* DE:" and "*/" or "/* EN:" and "*/" ):
+// - Follow the instruction to set up the menu entries - example (send without the "/* LANGUAGE:" and "*/"):
 
 
 /* DE:
@@ -217,6 +217,24 @@ ew6 - TEMPERATUUR text
 ew7 - DATUM text
 ew8 - VERJAARDAG text
 ew9 - DEURBELL text
+
+
+*/
+
+
+/* FR:
+
+
+start - WordClock Telegram welcome message
+ew1 - ALARME text
+ew2 - ANNIVERSAIRE text
+ew3 - POUBELLE text
+ew4 - A TABLE text
+ew5 - VACANCES text
+ew6 - VIENS ICI text
+ew7 - SONNETTE text
+ew8 - TEMPERATURE text
+ew9 - DATE text
 
 
 */
