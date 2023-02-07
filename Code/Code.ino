@@ -59,7 +59,7 @@
 // ###########################################################################################################################################
 // # Version number of the code:
 // ###########################################################################################################################################
-const char* WORD_CLOCK_VERSION = "V1.3.0";
+const char* WORD_CLOCK_VERSION = "V1.3.1";
 
 
 // ###########################################################################################################################################
@@ -359,7 +359,7 @@ void setupWebInterface() {
     // ew6 - TEMPERATURE text
     // ew7 - DATE text
     // ew8 - BIRTHDAY text
-    // ew9 - DOORBELL text
+    // ew9 - DOORBEL text
 
     // Color Extra Word ew1:
     char hex_ew1[7] = { 0 };
@@ -435,7 +435,7 @@ void setupWebInterface() {
     // ew6 - TEMPERATUUR text
     // ew7 - DATUM text
     // ew8 - VERJAARDAG text
-    // ew9 - DEURBELL text
+    // ew9 - DEURBEL text
 
     // Color Extra Word ew1:
     char hex_ew1[7] = { 0 };
@@ -497,7 +497,7 @@ void setupWebInterface() {
     char hex_ew9[7] = { 0 };
     sprintf(hex_ew9, "#%02X%02X%02X", redVal_ew9, greenVal_ew9, blueVal_ew9);
     uint16_t text_colour_ew9;
-    text_colour_ew9 = ESPUI.text("DEURBELL", colCallew9, ControlColor::Dark, hex_ew9);
+    text_colour_ew9 = ESPUI.text("DEURBEL", colCallew9, ControlColor::Dark, hex_ew9);
     ESPUI.setInputType(text_colour_ew9, "color");
   }
 
@@ -3541,10 +3541,10 @@ void handleNewMessages(int numNewMessages) {
       if (text == "/ew9") {
         if (ew9 == 0) {
           ew9 = 1;
-          bot.sendMessage(chat_id, "DEURBELL text set active " + emoActive);
+          bot.sendMessage(chat_id, "DEURBEL text set active " + emoActive);
         } else {
           ew9 = 0;
-          bot.sendMessage(chat_id, "DEURBELL text set inactive " + emoInactive);
+          bot.sendMessage(chat_id, "DEURBEL text set inactive " + emoInactive);
         }
         changedvalues = true;
       }
@@ -3835,7 +3835,7 @@ void set_extra_words() {
     // ew6 - TEMPERATUUR text
     // ew7 - DATUM text
     // ew8 - VERJAARDAG text
-    // ew9 - DEURBELL text
+    // ew9 - DEURBEL text
 
 
     if (ew1 == 1) {
@@ -3892,9 +3892,9 @@ void set_extra_words() {
     }
 
     if (ew9 == 1) {
-      setLEDexCol(33, 39, 1, redVal_ew9, greenVal_ew9, blueVal_ew9);  // ew9 - DEURBELL text
+      setLEDexCol(34, 40, 1, redVal_ew9, greenVal_ew9, blueVal_ew9);  // ew9 - DEURBEL text
     } else {
-      setLED(33, 39, 0);  // ew9 - DEURBELL text
+      setLED(34, 40, 0);  // ew9 - DEURBEL text
     }
   }
 
@@ -4413,10 +4413,10 @@ void handleExtraWords() {
       ewserver.sendHeader("Connection", "close");
       if (ew9 == 0) {
         ew9 = 1;
-        ewserver.send(200, "text/html", "DOORBELL text set active");
+        ewserver.send(200, "text/html", "DOORBEL text set active");
       } else {
         ew9 = 0;
-        ewserver.send(200, "text/html", "DOORBELL text set inactive");
+        ewserver.send(200, "text/html", "DOORBEL text set inactive");
       }
       changedvalues = true;
     });
@@ -4433,7 +4433,7 @@ void handleExtraWords() {
     // ew6 - TEMPERATUUR text
     // ew7 - DATUM text
     // ew8 - VERJAARDAG text
-    // ew9 - DEURBELL text
+    // ew9 - DEURBEL text
 
     ewserver.on("/ew1", HTTP_GET, []() {
       ewserver.sendHeader("Connection", "close");
@@ -4544,10 +4544,10 @@ void handleExtraWords() {
       ewserver.sendHeader("Connection", "close");
       if (ew9 == 0) {
         ew9 = 1;
-        ewserver.send(200, "text/html", "DEURBELL text set active");
+        ewserver.send(200, "text/html", "DEURBEL text set active");
       } else {
         ew9 = 0;
-        ewserver.send(200, "text/html", "DEURBELL text set inactive");
+        ewserver.send(200, "text/html", "DEURBEL text set inactive");
       }
       changedvalues = true;
     });
