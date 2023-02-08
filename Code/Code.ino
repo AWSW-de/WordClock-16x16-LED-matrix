@@ -59,7 +59,7 @@
 // ###########################################################################################################################################
 // # Version number of the code:
 // ###########################################################################################################################################
-const char* WORD_CLOCK_VERSION = "V1.3.1";
+const char* WORD_CLOCK_VERSION = "V1.3.2";
 
 
 // ###########################################################################################################################################
@@ -359,7 +359,7 @@ void setupWebInterface() {
     // ew6 - TEMPERATURE text
     // ew7 - DATE text
     // ew8 - BIRTHDAY text
-    // ew9 - DOORBEL text
+    // ew9 - DOORBELL text
 
     // Color Extra Word ew1:
     char hex_ew1[7] = { 0 };
@@ -4413,10 +4413,10 @@ void handleExtraWords() {
       ewserver.sendHeader("Connection", "close");
       if (ew9 == 0) {
         ew9 = 1;
-        ewserver.send(200, "text/html", "DOORBEL text set active");
+        ewserver.send(200, "text/html", "DOORBELL text set active");
       } else {
         ew9 = 0;
-        ewserver.send(200, "text/html", "DOORBEL text set inactive");
+        ewserver.send(200, "text/html", "DOORBELL text set inactive");
       }
       changedvalues = true;
     });
