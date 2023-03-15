@@ -59,15 +59,15 @@
 // ###########################################################################################################################################
 // # Version number of the code:
 // ###########################################################################################################################################
-const char* WORD_CLOCK_VERSION = "V1.3.3";
+const char* WORD_CLOCK_VERSION = "V1.4.0";
 
 
 // ###########################################################################################################################################
 // # Internal web server settings:
 // ###########################################################################################################################################
-AsyncWebServer server(80);  // Web server for config
-WebServer ewserver(8080);   // Web server for extra words
-WebServer updserver(2022);  // Web server for OTA updates
+AsyncWebServer server(80);       // Web server for config
+WebServer updserver(2022);       // Web server for OTA updates
+AsyncWebServer ledserver(2023);  // Web server for LED updates
 const byte DNS_PORT = 53;
 IPAddress apIP(192, 168, 44, 1);
 DNSServer dnsServer;
@@ -102,14 +102,19 @@ int redVal_ew9, greenVal_ew9, blueVal_ew9;
 int redVal_ew10, greenVal_ew10, blueVal_ew10;
 int redVal_ew11, greenVal_ew11, blueVal_ew11;
 int redVal_ew12, greenVal_ew12, blueVal_ew12;
-int intensity, intensity_day, intensity_night;
+int intensity, intensity_day, intensity_night, intensity_web;
+int set_web_intensity = 0;
+int set_web_colors = 0;
+int set_web_ew_color = 0;
 int usenightmode, day_time_start, day_time_stop, statusNightMode;
 int useshowip, usesinglemin;
-int statusLabelID, statusNightModeID;
-int useTelegram, useTelegramID;
-uint16_t TelegramSwitcher, TelegramSwitcherID;
+int statusLabelID, statusNightModeID, sliderBrightnessDayID, switchNightModeID, sliderBrightnessNightID, call_day_time_startID, call_day_time_stopID, intensity_web_HintID, ew_web_HintID;
+int useTelegram, useTelegramID, useTelegramEW;
+uint16_t TelegramSwitcher, TelegramSwitcherID, TelegramOnChange;
 char* selectLang;
 String chat_id = CHAT_ID;
+uint16_t text_colour_background;
+uint16_t text_colour_time;
 
 
 // ###########################################################################################################################################
@@ -145,12 +150,15 @@ void setup() {
   updatenow = true;                                     // Update the display 1x after startup
   update_display();                                     // Update LED display
   handleOTAupdate();                                    // Start the ESP32 OTA update server
-  handleExtraWords();                                   // Start the extra words web access server
+  handleLEDupdate();                                    // LED update via web
   secured_client.setCACert(TELEGRAM_CERTIFICATE_ROOT);  // Add root certificate for api.telegram.org
   if (useTelegram) {                                    // Telegram support
     Serial.println("Send initial Telegram message: WordClock " + String(WORD_CLOCK_VERSION) + " start finished");
-    bot.sendMessage(CHAT_ID, "WordClock " + String(WORD_CLOCK_VERSION) + " start finished " + emoStartup, "");
+    bot.sendMessage(CHAT_ID, "WordClock " + String(WORD_CLOCK_VERSION) + " start finished " + emoStartup + "\n\nPlease use /start to show the commands list.\n\nWeb interface online at: http://" + IpAddress2String(WiFi.localIP()) + "\n\nSmart home web URL examples: http://" + IpAddress2String(WiFi.localIP()) + ":2023", "");
   }
+  Serial.println("######################################################################");
+  Serial.println("# Web interface online at: http://" + IpAddress2String(WiFi.localIP()));
+  Serial.println("# Smart home web URL examples: http://" + IpAddress2String(WiFi.localIP()) + ":2023");
   Serial.println("######################################################################");
   Serial.println("# WordClock startup finished...");
   Serial.println("######################################################################");
@@ -177,7 +185,6 @@ void loop() {
     }
   }
   dnsServer.processNextRequest();                    // Update web server
-  ewserver.handleClient();                           // Extra words web server access update
   if (updatemode == true) updserver.handleClient();  // ESP32 OTA updates
 }
 
@@ -214,34 +221,36 @@ void setupWebInterface() {
   // Time color selector:
   char hex_time[7] = { 0 };
   sprintf(hex_time, "#%02X%02X%02X", redVal_time, greenVal_time, blueVal_time);
-  uint16_t text_colour_time;
   text_colour_time = ESPUI.text("Time", colCallTIME, ControlColor::Dark, hex_time);
   ESPUI.setInputType(text_colour_time, "color");
 
   // Background color selector:
   char hex_back[7] = { 0 };
   sprintf(hex_back, "#%02X%02X%02X", redVal_back, greenVal_back, blueVal_back);
-  uint16_t text_colour_background;
   text_colour_background = ESPUI.text("Background", colCallBACK, ControlColor::Dark, hex_back);
   ESPUI.setInputType(text_colour_background, "color");
 
-  // Intensity DAY slider selector: !!! DEFAULT LIMITED TO 128 of 255 !!!
-  ESPUI.slider("Brightness during the day", &sliderBrightnessDay, ControlColor::Dark, intensity_day, 0, LEDintensityLIMIT);
+  // Intensity DAY slider selector: !!! DEFAULT LIMITED TO 64 of 255 !!!
+  sliderBrightnessDayID = ESPUI.slider("Brightness during the day", &sliderBrightnessDay, ControlColor::Dark, intensity_day, 0, LEDintensityLIMIT);
 
   // Use night mode function:
-  ESPUI.switcher("Use night mode to reduce brightness", &switchNightMode, ControlColor::Dark, usenightmode);
+  switchNightModeID = ESPUI.switcher("Use night mode to reduce brightness", &switchNightMode, ControlColor::Dark, usenightmode);
 
   // Night mode status:
   statusNightModeID = ESPUI.label("Night mode status", ControlColor::Dark, "Night mode not used");
 
-  // Intensity NIGHT slider selector: !!! DEFAULT LIMITED TO 128 of 255 !!!
-  ESPUI.slider("Brightness at night", &sliderBrightnessNight, ControlColor::Dark, intensity_night, 0, LEDintensityLIMIT);
+  // Intensity NIGHT slider selector: !!! DEFAULT LIMITED TO 64 of 255 !!!
+  sliderBrightnessNightID = ESPUI.slider("Brightness at night", &sliderBrightnessNight, ControlColor::Dark, intensity_night, 0, LEDintensityLIMIT);
 
   // Day mode start time:
-  ESPUI.number("Day time starts at", call_day_time_start, ControlColor::Dark, day_time_start, 0, 11);
+  call_day_time_startID = ESPUI.number("Day time starts at", call_day_time_start, ControlColor::Dark, day_time_start, 0, 11);
 
   // Day mode stop time:
-  ESPUI.number("Day time ends after", call_day_time_stop, ControlColor::Dark, day_time_stop, 12, 23);
+  call_day_time_stopID = ESPUI.number("Day time ends after", call_day_time_stop, ControlColor::Dark, day_time_stop, 12, 23);
+
+  // Show note when intensity is currently controlled via web-url usage and these internal settings get disabled:
+  intensity_web_HintID = ESPUI.label("Manual settings disabled due to web URL usage:", ControlColor::Alizarin, "Restart WordClock or deactivate web control usage via http://" + IpAddress2String(WiFi.localIP()) + ":2023/config?INTENSITYviaWEB=0");
+  ESPUI.updateVisibility(intensity_web_HintID, false);
 
   // Use night mode function:
   ESPUI.switcher("Show single minutes to display the minute exact time", &switchSingleMinutes, ControlColor::Dark, usesinglemin);
@@ -578,6 +587,9 @@ void setupWebInterface() {
     ESPUI.setInputType(text_colour_ew9, "color");
   }
 
+  // Show note when extra word color is currently controlled via web-url usage and these internal settings are not in sync (yet):
+  ew_web_HintID = ESPUI.label("Manual extra word color settings may not be in sync (yet):", ControlColor::Alizarin, "Due to to web URL usage of the extra word colors the here shown color settings may not be in sync. Restart the WordClock to update the values.");
+  ESPUI.updateVisibility(ew_web_HintID, false);
 
   // Section WiFi:
   // #############
@@ -618,20 +630,35 @@ void setupWebInterface() {
   // Section Telegram:
   // #################
   ESPUI.separator("Telegram support:");
-
   if ((String(BOTtoken) == "XXXXXXXXXX:YYYYYYYYYYYYYYY-ZZZZZZZZZZZZZZZZZZZZ") || (String(CHAT_ID) == "1234512345")) {
-
     // Show note when Telegram was not configured yet:
     ESPUI.label("Status:", ControlColor::Dark, "Telegram not configured yet. See intructions in settings.h");
-
   } else {
-
     // Use Telegram support:
     TelegramSwitcher = ESPUI.switcher("Use Telegram support", &switchTelegram, ControlColor::Dark, useTelegram);
 
     // Reduce Telegram support to your own CHAT_ID:
     TelegramSwitcherID = ESPUI.switcher("React to your own Telegram ID only", &switchTelegramID, ControlColor::Dark, useTelegramID);
+
+    // Send a Telegram message on every change of extra words
+    // TelegramOnChange = ESPUI.switcher("Send a message on every change of extra words", &switchTelegramOnChange, ControlColor::Dark, useTelegramEW);
   }
+
+
+
+  // Section smart home control via web URLs:
+  // ########################################
+  ESPUI.separator("Smart home control via web URLs:");
+
+  // About note:
+  ESPUI.label("About note", ControlColor::Dark, "Control WordClock from your smart home environment via web URLs.");
+
+  // Functions note:
+  ESPUI.label("Functions", ControlColor::Dark, "You can configure colors, the LED intensity and the extra words and get the status of each named element.");
+
+  // Usage note:
+  ESPUI.label("Usage hints and examples", ControlColor::Dark, "http://" + IpAddress2String(WiFi.localIP()) + ":2023");
+
 
 
   // Section Update:
@@ -700,6 +727,7 @@ void getFlashValues() {
   usesinglemin = preferences.getUInt("usesinglemin", usesinglemin_default);
   useTelegram = preferences.getUInt("useTelegram", useTelegram_default);
   useTelegramID = preferences.getUInt("useTelegramID", useTelegramID_default);
+  useTelegramEW = preferences.getUInt("useTelegramEW", useTelegramEW_default);
   redVal_ew1 = preferences.getUInt("redVal_ew1", redVal_ew1_default);
   greenVal_ew1 = preferences.getUInt("greenVal_ew1", greenVal_ew1_default);
   blueVal_ew1 = preferences.getUInt("blueVal_ew1", blueVal_ew1_default);
@@ -774,6 +802,7 @@ void setFlashValues() {
   preferences.putUInt("usesinglemin", usesinglemin);
   preferences.putUInt("useTelegram", useTelegram);
   preferences.putUInt("useTelegramID", useTelegramID);
+  preferences.putUInt("useTelegramEW", useTelegramEW);
   preferences.putUInt("redVal_ew1", redVal_ew1);
   preferences.putUInt("greenVal_ew1", greenVal_ew1);
   preferences.putUInt("blueVal_ew1", blueVal_ew1);
@@ -867,6 +896,7 @@ void buttonWordClockReset(Control* sender, int type, void* param) {
         preferences.putUInt("day_time_stop", day_time_stop_default);
         preferences.putUInt("useTelegram", useTelegram_default);
         preferences.putUInt("useTelegramID", useTelegramID_default);
+        preferences.putUInt("useTelegramEW", useTelegramEW_default);
         preferences.putUInt("redVal_ew1", redVal_ew1_default);
         preferences.putUInt("greenVal_ew1", greenVal_ew1_default);
         preferences.putUInt("blueVal_ew1", blueVal_ew1_default);
@@ -1566,10 +1596,10 @@ int getDigit(int number, int pos) {
 int ResetCounter = 0;
 void buttonRestart(Control* sender, int type, void* param) {
   updatedevice = false;
-  delay(1000);
+  delay(250);
   if (changedvalues == true) {
     setFlashValues();  // Write settings to flash
-    delay(1000);
+    delay(250);
   }
   preferences.end();
   if (ResetCounter == 0) ResetTextLEDs(strip.Color(255, 0, 0));
@@ -1579,7 +1609,7 @@ void buttonRestart(Control* sender, int type, void* param) {
       break;
     case B_UP:
       if (ResetCounter == 1) {
-        delay(1000);
+        delay(250);
         ESP.restart();
       } else {
         Serial.println("Status: Restart request");
@@ -1789,6 +1819,25 @@ void switchTelegramID(Control* sender, int value) {
 
 
 // ###########################################################################################################################################
+// # GUI: Send a Telegram message on every change of extra words switch:
+// ###########################################################################################################################################
+void switchTelegramOnChange(Control* sender, int value) {
+  updatedevice = false;
+  delay(1000);
+  switch (value) {
+    case S_ACTIVE:
+      useTelegramEW = 1;
+      break;
+    case S_INACTIVE:
+      useTelegramEW = 0;
+      break;
+  }
+  changedvalues = true;
+  updatedevice = true;
+}
+
+
+// ###########################################################################################################################################
 // # GUI: Single minutes switch:
 // ###########################################################################################################################################
 void switchSingleMinutes(Control* sender, int value) {
@@ -1811,14 +1860,15 @@ void switchSingleMinutes(Control* sender, int value) {
 // # Update the display / time on it:
 // ###########################################################################################################################################
 void update_display() {
-  if (usenightmode == 1) {
+  if ((usenightmode == 1) && (set_web_intensity == 0)) {
     if ((iHour <= day_time_stop) && (iHour >= day_time_start)) {
       intensity = intensity_day;
     } else {
       intensity = intensity_night;
     }
   } else {
-    intensity = intensity_day;
+    if (set_web_intensity == 0) intensity = intensity_day;
+    if (set_web_intensity == 1) intensity = intensity_web;
   }
   strip.setBrightness(intensity);
   if (testTime == 0) {  // Show the current time:
@@ -1849,7 +1899,7 @@ void show_time(int hours, int minutes) {
     return;
   }
   String currentTime = String(hours) + ":" + String(minutes) + ":" + String(iSecond);
-  if (updatenow = true) Serial.println("Update LED display... " + currentTime);
+  // if (updatenow = true) Serial.println("Update LED display... " + currentTime);
   updatenow = false;
   lastHourSet = hours;
   lastMinutesSet = minutes;
@@ -3333,7 +3383,6 @@ void handleNewMessages(int numNewMessages) {
 
       if (text == "/start") {
         String welcome = "Welcome to WordClock Telegram bot, " + from_name + ". " + "\xF0\x9F\x98\x8A" + "\n";
-        welcome += "This is a WordClock chat action test message.\n\n";
         welcome += "Use /ew1, /ew2, /ew3, /ew4, /ew5, /ew6, /ew7, /ew8, /ew9, /ew10, /ew11, /ew12 or the menu to set the extra words.\n\n";
         bot.sendMessage(chat_id, welcome);
       }
@@ -3442,7 +3491,6 @@ void handleNewMessages(int numNewMessages) {
 
       if (text == "/start") {
         String welcome = "Welcome to WordClock Telegram bot, " + from_name + ". " + "\xF0\x9F\x98\x8A" + "\n";
-        welcome += "This is a WordClock chat action test message.\n\n";
         welcome += "Use /ew1, /ew2, /ew3, /ew4, /ew5, /ew6, /ew7, /ew8, /ew9 or the menu to set the extra words.\n\n";
         bot.sendMessage(chat_id, welcome);
       }
@@ -3551,7 +3599,6 @@ void handleNewMessages(int numNewMessages) {
 
       if (text == "/start") {
         String welcome = "Welcome to WordClock Telegram bot, " + from_name + ". " + "\xF0\x9F\x98\x8A" + "\n";
-        welcome += "This is a WordClock chat action test message.\n\n";
         welcome += "Use /ew1, /ew2, /ew3, /ew4, /ew5, /ew6, /ew7, /ew8, /ew9 or the menu to set the extra words.\n\n";
         bot.sendMessage(chat_id, welcome);
       }
@@ -3660,7 +3707,6 @@ void handleNewMessages(int numNewMessages) {
 
       if (text == "/start") {
         String welcome = "Welcome to WordClock Telegram bot, " + from_name + ". " + "\xF0\x9F\x98\x8A" + "\n";
-        welcome += "This is a WordClock chat action test message.\n\n";
         welcome += "Use /ew1, /ew2, /ew3, /ew4, /ew5, /ew6, /ew7, /ew8, /ew9 or the menu to set the extra words.\n\n";
         bot.sendMessage(chat_id, welcome);
       }
@@ -4130,564 +4176,296 @@ void handleOTAupdate() {
 
 
 // ###########################################################################################################################################
-// # Extra Words web update server:
+// # LED web update server:
 // ###########################################################################################################################################
-void handleExtraWords() {
-  updatedevice = false;
-  delay(1000);
+int ew = 0;               // Current extra word
+void handleLEDupdate() {  // LED server pages urls:
 
-  // OTA update server pages urls:
-  ewserver.on("/", HTTP_GET, []() {
-    ewserver.sendHeader("Connection", "close");
-    ewserver.send(200, "text/html", "WordClock web server on port 8080 is up...");
+  ledserver.on("/", HTTP_GET, [](AsyncWebServerRequest* request) {  // Show a manual how to use these links:
+    String message = "WordClock web configurations and querry options examples:\n\n";
+    message = message + "General:\n";
+    message = message + "http://" + IpAddress2String(WiFi.localIP()) + ":2023 --> Shows this text\n\n";
+    message = message + "Get the status of the WordClock at a glance:\n";
+    message = message + "http://" + IpAddress2String(WiFi.localIP()) + ":2023/status --> Show the status of all extra words and the color for the background and time texts\n\n";
+    message = message + "Configure the WordClock colors for background and time texts:\n";
+    message = message + "http://" + IpAddress2String(WiFi.localIP()) + ":2023/config?R-Time=0&G-Time=0&B-Time=255&R-Back=255&G-Back=0&B-Back=0&INTENSITY=25&INTENSITYviaWEB=1 --> Configures time texts to blue and the background to red. Intensity is set to 25 and sets this intensity value as master setting\n";
+    message = message + "http://" + IpAddress2String(WiFi.localIP()) + ":2023/config?R-Time=0&G-Time=0&B-Time=255 --> Configures time texts to blue\n";
+    message = message + "http://" + IpAddress2String(WiFi.localIP()) + ":2023/config?R-Back=255&G-Back=0&B-Back=0&INTENSITY=5&INTENSITYviaWEB=1 --> Configures the background to red. Intensity is set to 5 and sets this intensity value as master setting\n";
+    message = message + "http://" + IpAddress2String(WiFi.localIP()) + ":2023/config?INTENSITY=0&INTENSITYviaWEB=1 --> LED intensity is set to 0 and sets this intensity value as master setting, which will turn the display off...\n";
+    message = message + "http://" + IpAddress2String(WiFi.localIP()) + ":2023/config?INTENSITY=25&INTENSITYviaWEB=0 --> LED intensity is set to 25 and sets this intensity value as NOT master setting anymore, which will switch back to the in the web configuration set intensity parameters...\n";
+    message = message + "NOTE: The option INTENSITY has to be used together with the option INTENSITYviaWEB. This will ensure, that the automatic Day/Night-mode and the intensity setting that can be set in the internal WordClock web portal is not used at the same time and get disabled.\n\n";
+    message = message + "Set extra words:\n";
+    message = message + "http://" + IpAddress2String(WiFi.localIP()) + ":2023/ew/?ew1=1 --> Turns extra word 1 to on\n";
+    message = message + "http://" + IpAddress2String(WiFi.localIP()) + ":2023/ew/?ew1=0 --> Turns extra word 1 to off\n";
+    message = message + "http://" + IpAddress2String(WiFi.localIP()) + ":2023/ew/?ew9=1 --> Turns extra word 9 to on\n";
+    message = message + "http://" + IpAddress2String(WiFi.localIP()) + ":2023/ew/?ew9=0 --> Turns extra word 9 to off\n";
+    message = message + "http://" + IpAddress2String(WiFi.localIP()) + ":2023/ew/?ew3=1&R=0&G=0&B=255 --> Turns extra word 3 on and sets it to blue color\n";
+    message = message + "http://" + IpAddress2String(WiFi.localIP()) + ":2023/ew/?ew3=0 --> Turns extra word 3 to off\n";
+    message = message + "http://" + IpAddress2String(WiFi.localIP()) + ":2023/ew/?ew1=1&ew2=1&ew3=1&ew4=1&ew5=1&ew6=1&ew7=1&ew8=1&ew9=1&ew10=1&ew11=1&ew12=1 --> Turns ALL extra words to on\n";
+    message = message + "http://" + IpAddress2String(WiFi.localIP()) + ":2023/ew/?ew1=0&ew2=0&ew3=0&ew4=0&ew5=0&ew6=0&ew7=0&ew8=0&ew9=0&ew10=0&ew11=0&ew12=0 --> Turns ALL extra words to off\n\n";
+    message = message + "Get status of a single extra word:\n";
+    message = message + "http://" + IpAddress2String(WiFi.localIP()) + ":2023/ewstatus/?1 --> Status of extra word 1\n";
+    message = message + "http://" + IpAddress2String(WiFi.localIP()) + ":2023/ewstatus/?3 --> Status of extra word 3\n";
+    message = message + "http://" + IpAddress2String(WiFi.localIP()) + ":2023/ewstatus/?9 --> Status of extra word 9\n";
+    request->send(200, "text/plain", message);
   });
 
-  // ################################################################## DE:
-  if (langLEDlayout == 0) {  // DE:
 
-    ewserver.on("/ew1", HTTP_GET, []() {
-      ewserver.sendHeader("Connection", "close");
-      if (ew1 == 0) {
-        ew1 = 1;
-        ewserver.send(200, "text/html", "ALARM text set active");
+  ledserver.on("/config", HTTP_GET, [](AsyncWebServerRequest* request) {  // Configure background and time texts color and intensity:
+    int paramsNr = request->params();
+    // Serial.println(paramsNr);
+    for (int i = 0; i < paramsNr; i++) {
+      AsyncWebParameter* p = request->getParam(i);
+      // Serial.print("Param name: ");
+      // Serial.println(p->name());
+      // Serial.print("Param value: ");
+      // Serial.println(p->value());
+      // Serial.println("------------------");
+      if ((p->value().toInt() >= 0) && (p->value().toInt() <= 255)) {
+        if (String(p->name()) == "R-Time") redVal_time = p->value().toInt();
+        if (String(p->name()) == "G-Time") greenVal_time = p->value().toInt();
+        if (String(p->name()) == "B-Time") blueVal_time = p->value().toInt();
+        if (String(p->name()) == "R-Back") redVal_back = p->value().toInt();
+        if (String(p->name()) == "G-Back") greenVal_back = p->value().toInt();
+        if (String(p->name()) == "B-Back") blueVal_back = p->value().toInt();
+        if ((String(p->name()) == "INTENSITYviaWEB") && (p->value().toInt() == 1)) {
+          set_web_intensity = 1;
+          ESPUI.updateVisibility(intensity_web_HintID, true);
+          ESPUI.updateVisibility(statusNightModeID, false);
+          ESPUI.updateVisibility(sliderBrightnessDayID, false);
+          ESPUI.updateVisibility(switchNightModeID, false);
+          ESPUI.updateVisibility(sliderBrightnessNightID, false);
+          ESPUI.updateVisibility(call_day_time_startID, false);
+          ESPUI.updateVisibility(call_day_time_stopID, false);
+          ESPUI.updateVisibility(text_colour_time, false);
+          ESPUI.updateVisibility(text_colour_background, false);
+        }
+        if ((String(p->name()) == "INTENSITYviaWEB") && (p->value().toInt() == 0)) {
+          set_web_intensity = 0;
+          ESPUI.updateVisibility(intensity_web_HintID, false);
+          ESPUI.updateVisibility(statusNightModeID, true);
+          ESPUI.updateVisibility(sliderBrightnessDayID, true);
+          ESPUI.updateVisibility(switchNightModeID, true);
+          ESPUI.updateVisibility(sliderBrightnessNightID, true);
+          ESPUI.updateVisibility(call_day_time_startID, true);
+          ESPUI.updateVisibility(call_day_time_stopID, true);
+          ESPUI.updateVisibility(text_colour_time, true);
+          ESPUI.updateVisibility(text_colour_background, true);
+        }
+        if ((String(p->name()) == "INTENSITY") && (p->value().toInt() > LEDintensityLIMIT)) {
+          request->send(200, "text/plain", "INVALID INTENSITY VALUE - MAXIMUM VALUE=" + String(LEDintensityLIMIT));
+        } else {
+          if (String(p->name()) == "INTENSITY") intensity_web = p->value().toInt();
+        }
+        changedvalues = true;
+        updatenow = true;
       } else {
-        ew1 = 0;
-        ewserver.send(200, "text/html", "ALARM text set inactive");
+        request->send(200, "text/plain", "INVALID VALUES - MUST BE BETWEEN 0 and 255");
       }
-      changedvalues = true;
-    });
+    }
+    request->send(200, "text/plain", "WordClock config received");
+  });
 
 
-    ewserver.on("/ew2", HTTP_GET, []() {
-      ewserver.sendHeader("Connection", "close");
-      if (ew2 == 0) {
-        ew2 = 1;
-        ewserver.send(200, "text/html", "GEBURTSTAG text set active");
+  ledserver.on("/status", HTTP_GET, [](AsyncWebServerRequest* request) {  // Show the status of all extra words and the color for the background and time texts:
+    String message = "R-Time=" + String(redVal_time) + " G-Time=" + String(greenVal_time) + " B-Time=" + String(blueVal_time) + " R-Back=" + String(redVal_back) + " G-Back=" + String(greenVal_back) + " B-Back=" + String(blueVal_back) + " INTENSITY=" + String(intensity);
+    message = message + " ew1=" + String(ew1) + " ew2=" + String(ew2) + " ew3=" + String(ew3) + " ew4=" + String(ew4) + " ew5=" + String(ew5) + " ew6=" + String(ew6);
+    message = message + " ew7=" + String(ew7) + " ew8=" + String(ew8) + " ew9=" + String(ew9) + " ew10=" + String(ew10) + " ew11=" + String(ew11) + " ew12=" + String(ew12);
+    request->send(200, "text/plain", message);
+  });
+
+
+  ledserver.on("/ewstatus", HTTP_GET, [](AsyncWebServerRequest* request) {  // Get the status of the extra words:
+    int paramsNr = request->params();
+
+    for (int i = 0; i < paramsNr; i++) {
+      AsyncWebParameter* p = request->getParam(i);
+
+      if ((p->name().toInt() >= 0) && (p->name().toInt() <= 12)) {
+        switch (p->name().toInt()) {
+          case 1:
+            request->send(200, "text/plain", String(ew1));
+            break;
+          case 2:
+            request->send(200, "text/plain", String(ew2));
+            break;
+          case 3:
+            request->send(200, "text/plain", String(ew3));
+            break;
+          case 4:
+            request->send(200, "text/plain", String(ew4));
+            break;
+          case 5:
+            request->send(200, "text/plain", String(ew5));
+            break;
+          case 6:
+            request->send(200, "text/plain", String(ew6));
+            break;
+          case 7:
+            request->send(200, "text/plain", String(ew7));
+            break;
+          case 8:
+            request->send(200, "text/plain", String(ew8));
+            break;
+          case 9:
+            request->send(200, "text/plain", String(ew9));
+            break;
+          case 10:
+            request->send(200, "text/plain", String(ew10));
+            break;
+          case 11:
+            request->send(200, "text/plain", String(ew11));
+            break;
+          case 12:
+            request->send(200, "text/plain", String(ew12));
+            break;
+        }
       } else {
-        ew2 = 0;
-        ewserver.send(200, "text/html", "GEBURTSTAG text set inactive");
+        request->send(200, "text/plain", "INVALID VALUES - MUST BE BETWEEN 0 and 12");
       }
-      changedvalues = true;
-    });
+    }
+  });
 
 
-    ewserver.on("/ew3", HTTP_GET, []() {
-      ewserver.sendHeader("Connection", "close");
-      if (ew3 == 0) {
-        ew3 = 1;
-        ewserver.send(200, "text/html", "MUELL RAUS BRINGEN text set active");
+  ledserver.on("/ew", HTTP_GET, [](AsyncWebServerRequest* request) {  // Set the extra words:
+    int paramsNr = request->params();
+    // Serial.println(paramsNr);
+
+    for (int i = 0; i < paramsNr; i++) {
+      AsyncWebParameter* p = request->getParam(i);
+      if ((p->value().toInt() >= 0) && (p->value().toInt() <= 255)) {
+        if (String(p->name()) == "ew1") {
+          ew1 = p->value().toInt();
+          ew = 1;
+        }
+        if (String(p->name()) == "ew2") {
+          ew2 = p->value().toInt();
+          ew = 2;
+        }
+        if (String(p->name()) == "ew3") {
+          ew3 = p->value().toInt();
+          ew = 3;
+        }
+        if (String(p->name()) == "ew4") {
+          ew4 = p->value().toInt();
+          ew = 4;
+        }
+        if (String(p->name()) == "ew5") {
+          ew5 = p->value().toInt();
+          ew = 5;
+        }
+        if (String(p->name()) == "ew6") {
+          ew6 = p->value().toInt();
+          ew = 6;
+        }
+        if (String(p->name()) == "ew7") {
+          ew7 = p->value().toInt();
+          ew = 7;
+        }
+        if (String(p->name()) == "ew8") {
+          ew8 = p->value().toInt();
+          ew = 8;
+        }
+        if (String(p->name()) == "ew9") {
+          ew9 = p->value().toInt();
+          ew = 9;
+        }
+        if (String(p->name()) == "ew10") {
+          ew10 = p->value().toInt();
+          ew = 10;
+        }
+        if (String(p->name()) == "ew11") {
+          ew11 = p->value().toInt();
+          ew = 11;
+        }
+        if (String(p->name()) == "ew12") {
+          ew12 = p->value().toInt();
+          ew = 12;
+        }
+
+        switch (ew) {  // Set the color to the extra words:
+          case 1:
+            if (String(p->name()) == "R") redVal_ew1 = p->value().toInt();
+            if (String(p->name()) == "G") greenVal_ew1 = p->value().toInt();
+            if (String(p->name()) == "B") blueVal_ew1 = p->value().toInt();
+            break;
+          case 2:
+            if (String(p->name()) == "R") redVal_ew2 = p->value().toInt();
+            if (String(p->name()) == "G") greenVal_ew2 = p->value().toInt();
+            if (String(p->name()) == "B") blueVal_ew2 = p->value().toInt();
+            break;
+          case 3:
+            if (String(p->name()) == "R") redVal_ew3 = p->value().toInt();
+            if (String(p->name()) == "G") greenVal_ew3 = p->value().toInt();
+            if (String(p->name()) == "B") blueVal_ew3 = p->value().toInt();
+            break;
+          case 4:
+            if (String(p->name()) == "R") redVal_ew4 = p->value().toInt();
+            if (String(p->name()) == "G") greenVal_ew4 = p->value().toInt();
+            if (String(p->name()) == "B") blueVal_ew4 = p->value().toInt();
+            break;
+          case 5:
+            if (String(p->name()) == "R") redVal_ew5 = p->value().toInt();
+            if (String(p->name()) == "G") greenVal_ew5 = p->value().toInt();
+            if (String(p->name()) == "B") blueVal_ew5 = p->value().toInt();
+            break;
+          case 6:
+            if (String(p->name()) == "R") redVal_ew6 = p->value().toInt();
+            if (String(p->name()) == "G") greenVal_ew6 = p->value().toInt();
+            if (String(p->name()) == "B") blueVal_ew6 = p->value().toInt();
+            break;
+          case 7:
+            if (String(p->name()) == "R") redVal_ew7 = p->value().toInt();
+            if (String(p->name()) == "G") greenVal_ew7 = p->value().toInt();
+            if (String(p->name()) == "B") blueVal_ew7 = p->value().toInt();
+            break;
+          case 8:
+            if (String(p->name()) == "R") redVal_ew8 = p->value().toInt();
+            if (String(p->name()) == "G") greenVal_ew8 = p->value().toInt();
+            if (String(p->name()) == "B") blueVal_ew8 = p->value().toInt();
+            break;
+          case 9:
+            if (String(p->name()) == "R") redVal_ew9 = p->value().toInt();
+            if (String(p->name()) == "G") greenVal_ew9 = p->value().toInt();
+            if (String(p->name()) == "B") blueVal_ew9 = p->value().toInt();
+            break;
+          case 10:
+            if (String(p->name()) == "R") redVal_ew10 = p->value().toInt();
+            if (String(p->name()) == "G") greenVal_ew10 = p->value().toInt();
+            if (String(p->name()) == "B") blueVal_ew10 = p->value().toInt();
+            break;
+          case 11:
+            if (String(p->name()) == "R") redVal_ew11 = p->value().toInt();
+            if (String(p->name()) == "G") greenVal_ew11 = p->value().toInt();
+            if (String(p->name()) == "B") blueVal_ew11 = p->value().toInt();
+            break;
+          case 12:
+            if (String(p->name()) == "R") redVal_ew12 = p->value().toInt();
+            if (String(p->name()) == "G") greenVal_ew12 = p->value().toInt();
+            if (String(p->name()) == "B") blueVal_ew12 = p->value().toInt();
+            break;
+        }
+
+        // Show note in extra word section if colors were changed - colors may be out of sync... // TODO
+        if ((String(p->name()) == "R") || (String(p->name()) == "G") || (String(p->name()) == "B")) ESPUI.updateVisibility(ew_web_HintID, true);
+
+        request->send(200, "text/plain", "Extra word " + p->name() + " set to " + p->value());
+        changedvalues = true;
+        updatenow = true;
+
+        // Send Telegram message in addition? DO NOT ACTIVATE - NOTE WORKING YET ! // TODO
+        // if ((useTelegram == 1) && (useTelegramEW == 1)) {
+        //   Serial.println("Send Telegram message about changed extra word: " + String(ew) + " set to " + String(p->value()));
+        //   delay(10000);  // Needed to avoid the ESP32 to restart
+        //   bot.sendMessage(CHAT_ID, "Extra word " + String(ew) + " set to " + String(p->value()), "");
+        // }
       } else {
-        ew3 = 0;
-        ewserver.send(200, "text/html", "MUELL RAUS BRINGEN text set inactive");
+        request->send(200, "text/plain", "INVALID VALUES - MUST BE BETWEEN 0 and 255");
       }
-      changedvalues = true;
-    });
+    }
+  });
 
-
-    ewserver.on("/ew4", HTTP_GET, []() {
-      ewserver.sendHeader("Connection", "close");
-      if (ew4 == 0) {
-        ew4 = 1;
-        ewserver.send(200, "text/html", "AUTO text set active");
-      } else {
-        ew4 = 0;
-        ewserver.send(200, "text/html", "AUTO text set inactive");
-      }
-      changedvalues = true;
-    });
-
-
-    ewserver.on("/ew5", HTTP_GET, []() {
-      ewserver.sendHeader("Connection", "close");
-      if (ew5 == 0) {
-        ew5 = 1;
-        ewserver.send(200, "text/html", "FEIERTAG text set active");
-      } else {
-        ew5 = 0;
-        ewserver.send(200, "text/html", "FEIERTAG text set inactive");
-      }
-      changedvalues = true;
-    });
-
-
-    ewserver.on("/ew6", HTTP_GET, []() {
-      ewserver.sendHeader("Connection", "close");
-      if (ew6 == 0) {
-        ew6 = 1;
-        ewserver.send(200, "text/html", "FORMEL1 text set active");
-      } else {
-        ew6 = 0;
-        ewserver.send(200, "text/html", "FORMEL1 text set inactive");
-      }
-      changedvalues = true;
-    });
-
-
-    ewserver.on("/ew7", HTTP_GET, []() {
-      ewserver.sendHeader("Connection", "close");
-      if (ew7 == 0) {
-        ew7 = 1;
-        ewserver.send(200, "text/html", "GELBER SACK text set active");
-      } else {
-        ew7 = 0;
-        ewserver.send(200, "text/html", "GELBER SACK text set inactive");
-      }
-      changedvalues = true;
-    });
-
-
-    ewserver.on("/ew8", HTTP_GET, []() {
-      ewserver.sendHeader("Connection", "close");
-      if (ew8 == 0) {
-        ew8 = 1;
-        ewserver.send(200, "text/html", "URLAUB text set active");
-      } else {
-        ew8 = 0;
-        ewserver.send(200, "text/html", "URLAUB text set inactive");
-      }
-      changedvalues = true;
-    });
-
-
-    ewserver.on("/ew9", HTTP_GET, []() {
-      ewserver.sendHeader("Connection", "close");
-      if (ew9 == 0) {
-        ew9 = 1;
-        ewserver.send(200, "text/html", "WERKSTATT text set active");
-      } else {
-        ew9 = 0;
-        ewserver.send(200, "text/html", "WERKSTATT text set inactive");
-      }
-      changedvalues = true;
-    });
-
-
-    ewserver.on("/ew10", HTTP_GET, []() {
-      ewserver.sendHeader("Connection", "close");
-      if (ew10 == 0) {
-        ew10 = 1;
-        ewserver.send(200, "text/html", "ZEIT ZUM ZOCKEN text set active");
-      } else {
-        ew10 = 0;
-        ewserver.send(200, "text/html", "ZEIT ZUM ZOCKEN text set inactive");
-      }
-      changedvalues = true;
-    });
-
-
-    ewserver.on("/ew11", HTTP_GET, []() {
-      ewserver.sendHeader("Connection", "close");
-      if (ew11 == 0) {
-        ew11 = 1;
-        ewserver.send(200, "text/html", "FRISEUR text set active");
-      } else {
-        ew11 = 0;
-        ewserver.send(200, "text/html", "FRISEUR text set inactive");
-      }
-      changedvalues = true;
-    });
-
-
-    ewserver.on("/ew12", HTTP_GET, []() {
-      ewserver.sendHeader("Connection", "close");
-      if (ew12 == 0) {
-        ew12 = 1;
-        ewserver.send(200, "text/html", "TERMIN text set active");
-      } else {
-        ew12 = 0;
-        ewserver.send(200, "text/html", "TERMIN text set inactive");
-      }
-      changedvalues = true;
-    });
-  }
-
-  // ################################################################## EN:
-  if (langLEDlayout == 1) {  // EN:
-
-    ewserver.on("/ew1", HTTP_GET, []() {
-      ewserver.sendHeader("Connection", "close");
-      if (ew1 == 0) {
-        ew1 = 1;
-        ewserver.send(200, "text/html", "COME HERE text set active");
-      } else {
-        ew1 = 0;
-        ewserver.send(200, "text/html", "COME HERE text set inactive");
-      }
-      changedvalues = true;
-    });
-
-
-    ewserver.on("/ew2", HTTP_GET, []() {
-      ewserver.sendHeader("Connection", "close");
-      if (ew2 == 0) {
-        ew2 = 1;
-        ewserver.send(200, "text/html", "LUNCH TIME text set active");
-      } else {
-        ew2 = 0;
-        ewserver.send(200, "text/html", "LUNCH TIME text set inactive");
-      }
-      changedvalues = true;
-    });
-
-
-    ewserver.on("/ew3", HTTP_GET, []() {
-      ewserver.sendHeader("Connection", "close");
-      if (ew3 == 0) {
-        ew3 = 1;
-        ewserver.send(200, "text/html", "ALARM text set active");
-      } else {
-        ew3 = 0;
-        ewserver.send(200, "text/html", "ALARM text set inactive");
-      }
-      changedvalues = true;
-    });
-
-
-    ewserver.on("/ew4", HTTP_GET, []() {
-      ewserver.sendHeader("Connection", "close");
-      if (ew4 == 0) {
-        ew4 = 1;
-        ewserver.send(200, "text/html", "GARBAGE text set active");
-      } else {
-        ew4 = 0;
-        ewserver.send(200, "text/html", "GARBAGE text set inactive");
-      }
-      changedvalues = true;
-    });
-
-
-    ewserver.on("/ew5", HTTP_GET, []() {
-      ewserver.sendHeader("Connection", "close");
-      if (ew5 == 0) {
-        ew5 = 1;
-        ewserver.send(200, "text/html", "HOLIDAY text set active");
-      } else {
-        ew5 = 0;
-        ewserver.send(200, "text/html", "HOLIDAY text set inactive");
-      }
-      changedvalues = true;
-    });
-
-
-    ewserver.on("/ew6", HTTP_GET, []() {
-      ewserver.sendHeader("Connection", "close");
-      if (ew6 == 0) {
-        ew6 = 1;
-        ewserver.send(200, "text/html", "TEMPERATURE text set active");
-      } else {
-        ew6 = 0;
-        ewserver.send(200, "text/html", "TEMPERATURE text set inactive");
-      }
-      changedvalues = true;
-    });
-
-
-    ewserver.on("/ew7", HTTP_GET, []() {
-      ewserver.sendHeader("Connection", "close");
-      if (ew7 == 0) {
-        ew7 = 1;
-        ewserver.send(200, "text/html", "DATE text set active");
-      } else {
-        ew7 = 0;
-        ewserver.send(200, "text/html", "DATE text set inactive");
-      }
-      changedvalues = true;
-      ;
-    });
-
-
-    ewserver.on("/ew8", HTTP_GET, []() {
-      ewserver.sendHeader("Connection", "close");
-      if (ew8 == 0) {
-        ew8 = 1;
-        ewserver.send(200, "text/html", "BIRTHDAY text set active");
-      } else {
-        ew8 = 0;
-        ewserver.send(200, "text/html", "BIRTHDAY text set inactive");
-      }
-      changedvalues = true;
-    });
-
-
-    ewserver.on("/ew9", HTTP_GET, []() {
-      ewserver.sendHeader("Connection", "close");
-      if (ew9 == 0) {
-        ew9 = 1;
-        ewserver.send(200, "text/html", "DOORBELL text set active");
-      } else {
-        ew9 = 0;
-        ewserver.send(200, "text/html", "DOORBELL text set inactive");
-      }
-      changedvalues = true;
-    });
-  }
-
-  // ################################################################## NL:
-  if (langLEDlayout == 2) {  // NL:
-
-    // ew1 - KOM HIER text
-    // ew2 - LUNCH TIJD text
-    // ew3 - ALARM text
-    // ew4 - AFVAL text
-    // ew5 - VAKANTIE text
-    // ew6 - TEMPERATUUR text
-    // ew7 - DATUM text
-    // ew8 - VERJAARDAG text
-    // ew9 - DEURBEL text
-
-    ewserver.on("/ew1", HTTP_GET, []() {
-      ewserver.sendHeader("Connection", "close");
-      if (ew1 == 0) {
-        ew1 = 1;
-        ewserver.send(200, "text/html", "KOM HIER text set active");
-      } else {
-        ew1 = 0;
-        ewserver.send(200, "text/html", "KOM HIER text set inactive");
-      }
-      changedvalues = true;
-    });
-
-
-    ewserver.on("/ew2", HTTP_GET, []() {
-      ewserver.sendHeader("Connection", "close");
-      if (ew2 == 0) {
-        ew2 = 1;
-        ewserver.send(200, "text/html", "LUNCH TIJD text set active");
-      } else {
-        ew2 = 0;
-        ewserver.send(200, "text/html", "LUNCH TIJD text set inactive");
-      }
-      changedvalues = true;
-    });
-
-
-    ewserver.on("/ew3", HTTP_GET, []() {
-      ewserver.sendHeader("Connection", "close");
-      if (ew3 == 0) {
-        ew3 = 1;
-        ewserver.send(200, "text/html", "ALARM text set active");
-      } else {
-        ew3 = 0;
-        ewserver.send(200, "text/html", "ALARM text set inactive");
-      }
-      changedvalues = true;
-    });
-
-
-    ewserver.on("/ew4", HTTP_GET, []() {
-      ewserver.sendHeader("Connection", "close");
-      if (ew4 == 0) {
-        ew4 = 1;
-        ewserver.send(200, "text/html", "AFVAL text set active");
-      } else {
-        ew4 = 0;
-        ewserver.send(200, "text/html", "AFVAL text set inactive");
-      }
-      changedvalues = true;
-    });
-
-
-    ewserver.on("/ew5", HTTP_GET, []() {
-      ewserver.sendHeader("Connection", "close");
-      if (ew5 == 0) {
-        ew5 = 1;
-        ewserver.send(200, "text/html", "VAKANTIE text set active");
-      } else {
-        ew5 = 0;
-        ewserver.send(200, "text/html", "VAKANTIE text set inactive");
-      }
-      changedvalues = true;
-    });
-
-
-    ewserver.on("/ew6", HTTP_GET, []() {
-      ewserver.sendHeader("Connection", "close");
-      if (ew6 == 0) {
-        ew6 = 1;
-        ewserver.send(200, "text/html", "TEMPERATUUR text set active");
-      } else {
-        ew6 = 0;
-        ewserver.send(200, "text/html", "TEMPERATUUR text set inactive");
-      }
-      changedvalues = true;
-    });
-
-
-    ewserver.on("/ew7", HTTP_GET, []() {
-      ewserver.sendHeader("Connection", "close");
-      if (ew7 == 0) {
-        ew7 = 1;
-        ewserver.send(200, "text/html", "DATUM text set active");
-      } else {
-        ew7 = 0;
-        ewserver.send(200, "text/html", "DATUM text set inactive");
-      }
-      changedvalues = true;
-      ;
-    });
-
-
-    ewserver.on("/ew8", HTTP_GET, []() {
-      ewserver.sendHeader("Connection", "close");
-      if (ew8 == 0) {
-        ew8 = 1;
-        ewserver.send(200, "text/html", "VERJAARDAG text set active");
-      } else {
-        ew8 = 0;
-        ewserver.send(200, "text/html", "VERJAARDAG text set inactive");
-      }
-      changedvalues = true;
-    });
-
-
-    ewserver.on("/ew9", HTTP_GET, []() {
-      ewserver.sendHeader("Connection", "close");
-      if (ew9 == 0) {
-        ew9 = 1;
-        ewserver.send(200, "text/html", "DEURBEL text set active");
-      } else {
-        ew9 = 0;
-        ewserver.send(200, "text/html", "DEURBEL text set inactive");
-      }
-      changedvalues = true;
-    });
-  }
-
-  // ################################################################## FR:
-  if (langLEDlayout == 3) {  // FR:
-
-    // ew1 - ALARME text
-    // ew2 - ANNIVERSAIRE text
-    // ew3 - POUBELLE text
-    // ew4 - A TABLE text
-    // ew5 - VACANCES text
-    // ew6 - VIENS ICI text
-    // ew7 - SONNETTE text
-    // ew8 - TEMPERATURE text
-    // ew9 - DATE text
-
-    ewserver.on("/ew1", HTTP_GET, []() {
-      ewserver.sendHeader("Connection", "close");
-      if (ew1 == 0) {
-        ew1 = 1;
-        ewserver.send(200, "text/html", "ALARME text set active");
-      } else {
-        ew1 = 0;
-        ewserver.send(200, "text/html", "ALARME text set inactive");
-      }
-      changedvalues = true;
-    });
-
-
-    ewserver.on("/ew2", HTTP_GET, []() {
-      ewserver.sendHeader("Connection", "close");
-      if (ew2 == 0) {
-        ew2 = 1;
-        ewserver.send(200, "text/html", "ANNIVERSAIRE text set active");
-      } else {
-        ew2 = 0;
-        ewserver.send(200, "text/html", "ANNIVERSAIRE text set inactive");
-      }
-      changedvalues = true;
-    });
-
-
-    ewserver.on("/ew3", HTTP_GET, []() {
-      ewserver.sendHeader("Connection", "close");
-      if (ew3 == 0) {
-        ew3 = 1;
-        ewserver.send(200, "text/html", "POUBELLE text set active");
-      } else {
-        ew3 = 0;
-        ewserver.send(200, "text/html", "POUBELLE text set inactive");
-      }
-      changedvalues = true;
-    });
-
-
-    ewserver.on("/ew4", HTTP_GET, []() {
-      ewserver.sendHeader("Connection", "close");
-      if (ew4 == 0) {
-        ew4 = 1;
-        ewserver.send(200, "text/html", "A TABLE text set active");
-      } else {
-        ew4 = 0;
-        ewserver.send(200, "text/html", "A TABLE text set inactive");
-      }
-      changedvalues = true;
-    });
-
-
-    ewserver.on("/ew5", HTTP_GET, []() {
-      ewserver.sendHeader("Connection", "close");
-      if (ew5 == 0) {
-        ew5 = 1;
-        ewserver.send(200, "text/html", "VACANCES text set active");
-      } else {
-        ew5 = 0;
-        ewserver.send(200, "text/html", "VACANCES text set inactive");
-      }
-      changedvalues = true;
-    });
-
-
-    ewserver.on("/ew6", HTTP_GET, []() {
-      ewserver.sendHeader("Connection", "close");
-      if (ew6 == 0) {
-        ew6 = 1;
-        ewserver.send(200, "text/html", "VIENS ICI text set active");
-      } else {
-        ew6 = 0;
-        ewserver.send(200, "text/html", "VIENS ICI text set inactive");
-      }
-      changedvalues = true;
-    });
-
-
-    ewserver.on("/ew7", HTTP_GET, []() {
-      ewserver.sendHeader("Connection", "close");
-      if (ew7 == 0) {
-        ew7 = 1;
-        ewserver.send(200, "text/html", "SONNETTE text set active");
-      } else {
-        ew7 = 0;
-        ewserver.send(200, "text/html", "SONNETTE text set inactive");
-      }
-      changedvalues = true;
-      ;
-    });
-
-
-    ewserver.on("/ew8", HTTP_GET, []() {
-      ewserver.sendHeader("Connection", "close");
-      if (ew8 == 0) {
-        ew8 = 1;
-        ewserver.send(200, "text/html", "TEMPERATURE text set active");
-      } else {
-        ew8 = 0;
-        ewserver.send(200, "text/html", "TEMPERATURE text set inactive");
-      }
-      changedvalues = true;
-    });
-
-
-    ewserver.on("/ew9", HTTP_GET, []() {
-      ewserver.sendHeader("Connection", "close");
-      if (ew9 == 0) {
-        ew9 = 1;
-        ewserver.send(200, "text/html", "DATE text set active");
-      } else {
-        ew9 = 0;
-        ewserver.send(200, "text/html", "DATE text set inactive");
-      }
-      changedvalues = true;
-    });
-  }
-
-
-
-  ewserver.begin();
-  updatedevice = true;
+  ledserver.begin();
 }
 
 

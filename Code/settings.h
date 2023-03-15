@@ -6,7 +6,7 @@
 // #
 // # Released under license: GNU General Public License v3.0: https://github.com/AWSW-de/WordClock-16x16-LED-matrix/blob/main/LICENSE
 // #
-// # Compatible with WordClock version: V1.3.3
+// # Compatible with WordClock version: V1.4.0
 // #
 // ###########################################################################################################################################
 /*
@@ -27,8 +27,8 @@
 // ###########################################################################################################################################
 // # Hardware settings:
 // ###########################################################################################################################################
-#define LEDPIN 32              // Arduino-Pin connected to the NeoPixels
-#define NUMPIXELS 256          // How many NeoPixels are attached to the Arduino
+#define LEDPIN 32      // Arduino-Pin connected to the NeoPixels
+#define NUMPIXELS 256  // How many NeoPixels are attached to the Arduino
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUMPIXELS, LEDPIN, NEO_GRB + NEO_KHZ800);
 
 
@@ -36,16 +36,16 @@ Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUMPIXELS, LEDPIN, NEO_GRB + NEO_KHZ
 // # LED intensity setting:
 // ###########################################################################################################################################
 #define LEDintensityLIMIT 64  // off 255 max. !!! Do NOT change this if you don't know how much power drain this may cause to avoid damage !!!
-// Limit the intensity level to be able to select in the configuration to avoid to much power drain and to avoid hardware failures over time. 
-// In case you want to use the device over longer times with a higher intensity or even higher, you will need to consider a much more 
-// powerful power supply, a better cable to connect the device and you have to power the matrix directly to 5V of the power supply. 
+// Limit the intensity level to be able to select in the configuration to avoid to much power drain and to avoid hardware failures over time.
+// In case you want to use the device over longer times with a higher intensity or even higher, you will need to consider a much more
+// powerful power supply, a better cable to connect the device and you have to power the matrix directly to 5V of the power supply.
 // Otherwise the ESP32 can fail over time. Therefore this setting is limited and should not be raised. !!! You have been warned !!!
-// In case you really need a higher value, you need to make sure to power the matrix directly so that the power is not served over the ESP32 
+// In case you really need a higher value, you need to make sure to power the matrix directly so that the power is not served over the ESP32
 // to the matrix to avoid its damage over time.
-// Please think about if you really need such a high intensity value. The WordClocks used from me run at a maximum intensity of 33 which is 
+// Please think about if you really need such a high intensity value. The WordClocks used from me run at a maximum intensity of 33 which is
 // really bright in my eyes and all levels above 64 i could not see really an advantage anymore that the display is better able to view...
 // !!! Make sure to use propper components !!!
- 
+
 
 // ###########################################################################################################################################
 // # LED language layout default: !!! SET YOUR DEFAULT LANGUAGE HERE !!!
@@ -128,6 +128,7 @@ int ew12_default = 0;  // Extra Word 12
 int useshowip_default = 1;      // Show the current ip at boot
 int useTelegram_default = 0;    // Use Telegram support
 int useTelegramID_default = 0;  // React to your own Telegram CHAT_ID only
+int useTelegramEW_default = 0;  // Send a Telegram message on every change of extra words
 
 
 // ###########################################################################################################################################
