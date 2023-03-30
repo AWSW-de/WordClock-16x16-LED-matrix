@@ -4,6 +4,8 @@ WordClock 16x16 LED matrix, super easy build, 3 wires to solder only. Telegram, 
 
 Code for the <a href="https://www.printables.com/de/model/331012-wordclock-16x16-led-matrix">WordClock 16x16 LED matrix</a> 3D print on <a href="https://www.printables.com">www.printables.com</a>
 
+Setup video intructions available for <a href="https://www.youtube.com/watch?v=BrVKY1sfZgI">Microsoft Windows 10/11</a> and <a href="https://www.youtube.com/watch?v=GptDFKhga0k">Apple macOS</a>.
+
 Layouts for DE, EN, NL and FR available:
 
 <img src="./Images/WordClock_DE_EN.png">
