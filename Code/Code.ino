@@ -59,7 +59,7 @@
 // ###########################################################################################################################################
 // # Version number of the code:
 // ###########################################################################################################################################
-const char* WORD_CLOCK_VERSION = "V1.4.0";
+const char* WORD_CLOCK_VERSION = "V1.5.0";
 
 
 // ###########################################################################################################################################
@@ -108,9 +108,9 @@ int set_web_colors = 0;
 int set_web_ew_color = 0;
 int usenightmode, day_time_start, day_time_stop, statusNightMode;
 int useshowip, usesinglemin;
-int statusLabelID, statusNightModeID, sliderBrightnessDayID, switchNightModeID, sliderBrightnessNightID, call_day_time_startID, call_day_time_stopID, intensity_web_HintID, ew_web_HintID;
-int useTelegram, useTelegramID, useTelegramEW;
-uint16_t TelegramSwitcher, TelegramSwitcherID, TelegramOnChange;
+int statusLabelID, statusNightModeID, sliderBrightnessDayID, switchNightModeID, sliderBrightnessNightID, call_day_time_startID, call_day_time_stopID, intensity_web_HintID, ew_web_HintID, statusLanguageID;
+int useTelegram, useTelegramID;
+uint16_t TelegramSwitcher, TelegramSwitcherID;
 char* selectLang;
 String chat_id = CHAT_ID;
 uint16_t text_colour_background;
@@ -139,6 +139,7 @@ void setup() {
   Serial.println("######################################################################");
   getFlashValues();                                     // Read settings from flash
   strip.begin();                                        // Init the LEDs
+  strip.show();                                         // Turn off the LEDs
   intensity = intensity_day;                            // Set the intenity to day mode for startup
   strip.setBrightness(intensity);                       // Set LED brightness
   startup();                                            // Run startup actions
@@ -204,13 +205,6 @@ void setupWebInterface() {
 
   // WordClock version:
   ESPUI.label("Version", ControlColor::None, WORD_CLOCK_VERSION);
-
-  // Set layout language:
-  if (langLEDlayout == 0) selectLang = "Current layout language: German";
-  if (langLEDlayout == 1) selectLang = "Current layout language: English";
-  if (langLEDlayout == 2) selectLang = "Current layout language: Dutch";
-  if (langLEDlayout == 3) selectLang = "Current layout language: French";
-  ESPUI.button(selectLang, &buttonlangChange, ControlColor::Dark, "Change layout language", (void*)4);
 
 
 
@@ -639,9 +633,6 @@ void setupWebInterface() {
 
     // Reduce Telegram support to your own CHAT_ID:
     TelegramSwitcherID = ESPUI.switcher("React to your own Telegram ID only", &switchTelegramID, ControlColor::Dark, useTelegramID);
-
-    // Send a Telegram message on every change of extra words
-    // TelegramOnChange = ESPUI.switcher("Send a message on every change of extra words", &switchTelegramOnChange, ControlColor::Dark, useTelegramEW);
   }
 
 
@@ -676,6 +667,27 @@ void setupWebInterface() {
 
 
 
+  // Section Language:
+  // #################
+  ESPUI.separator("Language:");
+
+  // Set layout language:
+  if (langLEDlayout == 0) selectLang = "German";
+  if (langLEDlayout == 1) selectLang = "English";
+  if (langLEDlayout == 2) selectLang = "Dutch";
+  if (langLEDlayout == 3) selectLang = "French";
+
+  // Language overview:
+  ESPUI.addControl(ControlType::Label, "Available languages", "<center><table border='3' class='center' width='100%'><tr><th>Value:</th><th>Language:</th><th>Value:</th><th>Language:</th></tr><tr align='center'><td>0</td><td>German</td><td>2</td><td>Dutch</td></tr><tr align='center'><td>1</td><td>English</td><td>3</td><td>French</td></tr></table>", ControlColor::Dark, Control::noParent, 0);
+
+  // Change language:
+  ESPUI.number("Select your language", call_langauge_select, ControlColor::Dark, langLEDlayout, 0, 3);
+
+  // Current language:
+  statusLanguageID = ESPUI.label("Current layout language", ControlColor::Dark, selectLang);
+
+
+
   // Section Maintenance:
   // ####################
   ESPUI.separator("Maintenance:");
@@ -690,11 +702,11 @@ void setupWebInterface() {
   ESPUI.button("Reset WordClock settings", &buttonWordClockReset, ControlColor::Dark, "Reset WordClock settings", (void*)3);
 
 
-
   // Update night mode status text on startup:
   if (usenightmode == 1) {
-    if ((iHour <= day_time_stop) && (iHour >= day_time_start)) {
+    if ((iHour >= day_time_start) && (iHour <= day_time_stop)) {
       ESPUI.print(statusNightModeID, "Day time");
+      if ((iHour == 0) && (day_time_stop == 23)) ESPUI.print(statusNightModeID, "Night time");  // Special function if day_time_stop set to 23 and time is 24, so 0...
     } else {
       ESPUI.print(statusNightModeID, "Night time");
     }
@@ -727,7 +739,6 @@ void getFlashValues() {
   usesinglemin = preferences.getUInt("usesinglemin", usesinglemin_default);
   useTelegram = preferences.getUInt("useTelegram", useTelegram_default);
   useTelegramID = preferences.getUInt("useTelegramID", useTelegramID_default);
-  useTelegramEW = preferences.getUInt("useTelegramEW", useTelegramEW_default);
   redVal_ew1 = preferences.getUInt("redVal_ew1", redVal_ew1_default);
   greenVal_ew1 = preferences.getUInt("greenVal_ew1", greenVal_ew1_default);
   blueVal_ew1 = preferences.getUInt("blueVal_ew1", blueVal_ew1_default);
@@ -802,7 +813,6 @@ void setFlashValues() {
   preferences.putUInt("usesinglemin", usesinglemin);
   preferences.putUInt("useTelegram", useTelegram);
   preferences.putUInt("useTelegramID", useTelegramID);
-  preferences.putUInt("useTelegramEW", useTelegramEW);
   preferences.putUInt("redVal_ew1", redVal_ew1);
   preferences.putUInt("greenVal_ew1", greenVal_ew1);
   preferences.putUInt("blueVal_ew1", blueVal_ew1);
@@ -853,8 +863,9 @@ void setFlashValues() {
   preferences.putUInt("ew12", ew12);
   if (debugmode == 1) Serial.println("Write settings to flash: END");
   if (usenightmode == 1) {
-    if ((iHour <= day_time_stop) && (iHour >= day_time_start)) {
+    if ((iHour >= day_time_start) && (iHour <= day_time_stop)) {
       ESPUI.print(statusNightModeID, "Day time");
+      if ((iHour == 0) && (day_time_stop == 23)) ESPUI.print(statusNightModeID, "Night time");  // Special function if day_time_stop set to 23 and time is 24, so 0...
     } else {
       ESPUI.print(statusNightModeID, "Night time");
     }
@@ -896,7 +907,6 @@ void buttonWordClockReset(Control* sender, int type, void* param) {
         preferences.putUInt("day_time_stop", day_time_stop_default);
         preferences.putUInt("useTelegram", useTelegram_default);
         preferences.putUInt("useTelegramID", useTelegramID_default);
-        preferences.putUInt("useTelegramEW", useTelegramEW_default);
         preferences.putUInt("redVal_ew1", redVal_ew1_default);
         preferences.putUInt("greenVal_ew1", greenVal_ew1_default);
         preferences.putUInt("blueVal_ew1", blueVal_ew1_default);
@@ -1007,72 +1017,20 @@ void buttonWordClockReset(Control* sender, int type, void* param) {
 
 
 // ###########################################################################################################################################
-// # GUI: Change LED layout language:
+// # GUI: Language selection
 // ###########################################################################################################################################
-int langChangeCounter = 0;
-void buttonlangChange(Control* sender, int type, void* param) {
+void call_langauge_select(Control* sender, int type) {
   updatedevice = false;
   delay(1000);
-  switch (type) {
-    case B_DOWN:
-      break;
-    case B_UP:
-      if (langChangeCounter == 1) {
-        Serial.println("WORDCLOCK LAYOUT LANGUAGE CHANGE EXECUTED");
-        if (langLEDlayout == 0) preferences.putUInt("langLEDlayout", 1);  // DE to EN
-        if (langLEDlayout == 1) preferences.putUInt("langLEDlayout", 2);  // EN to NL
-        if (langLEDlayout == 2) preferences.putUInt("langLEDlayout", 3);  // NL to FR
-        if (langLEDlayout == 3) preferences.putUInt("langLEDlayout", 0);  // FR to DE
-        delay(1000);
-        preferences.end();
-        back_color();
-        redVal_time = 0;
-        greenVal_time = 255;
-        blueVal_time = 0;
-        if (langLEDlayout == 0) {  // DE: NEUSTART
-          setLED(165, 172, 1);
-        }
-        if (langLEDlayout == 1) {  // EN: RESET
-          setLED(24, 28, 1);
-        }
-        if (langLEDlayout == 2) {  // NL: HERSTART
-          setLED(96, 103, 1);
-        }
-        if (langLEDlayout == 3) {  // FR: REDEMARRAGE
-          setLED(101, 111, 1);
-        }
-        strip.show();
-        Serial.println("##########################################################################");
-        Serial.println("# WORDCLOCK LAYOUT LANGUAGE WAS CHANGED... WORDCLOCK WILL NOW RESTART... #");
-        Serial.println("##########################################################################");
-        delay(1000);
-        ESP.restart();
-      } else {
-        Serial.println("WORDCLOCK LAYOUT LANGUAGE CHANGE REQUESTED");
-        ESPUI.updateButton(sender->id, "! Press button once more to apply the language change and restart !");
-        ESPUI.print(statusLabelID, "WORDCLOCK LAYOUT LANGUAGE CHANGE REQUESTED");
-        back_color();
-        redVal_time = 255;
-        greenVal_time = 0;
-        blueVal_time = 0;
-        if (langLEDlayout == 0) {  // DE: NEUSTART
-          setLED(165, 172, 1);
-        }
-        if (langLEDlayout == 1) {  // EN: RESET
-          setLED(24, 28, 1);
-        }
-        if (langLEDlayout == 2) {  // NL: HERSTART
-          setLED(96, 103, 1);
-        }
-        if (langLEDlayout == 3) {  // FR: REDEMARRAGE
-          setLED(101, 111, 1);
-        }
-        strip.show();
-        delay(1000);
-        langChangeCounter = langChangeCounter + 1;
-      }
-      break;
-  }
+  langLEDlayout = sender->value.toInt();
+  // Set layout language text in gui:
+  if (langLEDlayout == 0) selectLang = "German";
+  if (langLEDlayout == 1) selectLang = "English";
+  if (langLEDlayout == 2) selectLang = "Dutch";
+  if (langLEDlayout == 3) selectLang = "French";
+  ESPUI.print(statusLanguageID, selectLang);
+  changedvalues = true;
+  updatedevice = true;
 }
 
 
@@ -1740,8 +1698,9 @@ void switchNightMode(Control* sender, int value) {
   switch (value) {
     case S_ACTIVE:
       usenightmode = 1;
-      if ((iHour <= day_time_stop) && (iHour >= day_time_start)) {
+      if ((iHour >= day_time_start) && (iHour <= day_time_stop)) {
         intensity = intensity_day;
+        if ((iHour == 0) && (day_time_stop == 23)) intensity = intensity_night;  // Special function if day_time_stop set to 23 and time is 24, so 0...
       } else {
         intensity = intensity_night;
       }
@@ -1819,25 +1778,6 @@ void switchTelegramID(Control* sender, int value) {
 
 
 // ###########################################################################################################################################
-// # GUI: Send a Telegram message on every change of extra words switch:
-// ###########################################################################################################################################
-void switchTelegramOnChange(Control* sender, int value) {
-  updatedevice = false;
-  delay(1000);
-  switch (value) {
-    case S_ACTIVE:
-      useTelegramEW = 1;
-      break;
-    case S_INACTIVE:
-      useTelegramEW = 0;
-      break;
-  }
-  changedvalues = true;
-  updatedevice = true;
-}
-
-
-// ###########################################################################################################################################
 // # GUI: Single minutes switch:
 // ###########################################################################################################################################
 void switchSingleMinutes(Control* sender, int value) {
@@ -1860,9 +1800,11 @@ void switchSingleMinutes(Control* sender, int value) {
 // # Update the display / time on it:
 // ###########################################################################################################################################
 void update_display() {
+  // Set LED intensity:
   if ((usenightmode == 1) && (set_web_intensity == 0)) {
-    if ((iHour <= day_time_stop) && (iHour >= day_time_start)) {
+    if ((iHour >= day_time_start) && (iHour <= day_time_stop)) {
       intensity = intensity_day;
+      if ((iHour == 0) && (day_time_stop == 23)) intensity = intensity_night;  // Special function if day_time_stop set to 23 and time is 24, so 0..
     } else {
       intensity = intensity_night;
     }
@@ -1871,6 +1813,22 @@ void update_display() {
     if (set_web_intensity == 1) intensity = intensity_web;
   }
   strip.setBrightness(intensity);
+
+  // Test day/night times function:
+  // Serial.println("############################################################################################");
+  // for (int i = 0; i < 24; i++) {
+  //   String daynightvar = "-";
+  //   if ((i >= day_time_start) && (i <= day_time_stop)) {
+  //     daynightvar = "Day time";
+  //     if ((i == 0) && (day_time_stop == 23)) daynightvar = "Night time";
+  //   } else {
+  //     daynightvar = "Night time";
+  //   }
+  //   Serial.println("Current hour: " + String(i) + " day_time_start: " + String(day_time_start) + " day_time_stop: " + String(day_time_stop) + " --> " + daynightvar);
+  // }
+  // Serial.println("############################################################################################");
+
+
   if (testTime == 0) {  // Show the current time:
     show_time(iHour, iMinute);
   } else {  // TEST THE DISPLAY TIME OUTPUT:
@@ -1903,7 +1861,6 @@ void show_time(int hours, int minutes) {
   updatenow = false;
   lastHourSet = hours;
   lastMinutesSet = minutes;
-
 
   // Set background color:
   back_color();
@@ -2026,7 +1983,6 @@ void show_time(int hours, int minutes) {
     if (iMinute < 5) setLED(224, 226, 1);  // UHR
   }
 
-
   // ########################################################### EN:
   if (langLEDlayout == 1) {  // EN:
 
@@ -2131,7 +2087,6 @@ void show_time(int hours, int minutes) {
 
     if (iMinute < 5) setLED(212, 218, 1);  // O'CLOCK
   }
-
 
   // ########################################################### NL:
   if (langLEDlayout == 2) {  // NL:
@@ -2251,8 +2206,6 @@ void show_time(int hours, int minutes) {
       setLED(192, 194, 1);  // UUR
     }
   }
-
-
 
   // ########################################################### FR:
   if (langLEDlayout == 3) {  // FR:
@@ -2388,9 +2341,10 @@ void show_time(int hours, int minutes) {
     }
   }
 
-
   // Handle extra words:
   set_extra_words();
+
+  // if (debugmode == 1) Serial.println("Update display");
 
   strip.show();
 }
@@ -2541,6 +2495,7 @@ void showMinutes(int minutes) {
     }
   }
 }
+
 
 // ###########################################################################################################################################
 // # Startup function:
@@ -4194,6 +4149,7 @@ void handleLEDupdate() {  // LED server pages urls:
     message = message + "http://" + IpAddress2String(WiFi.localIP()) + ":2023/config?INTENSITY=0&INTENSITYviaWEB=1 --> LED intensity is set to 0 and sets this intensity value as master setting, which will turn the display off...\n";
     message = message + "http://" + IpAddress2String(WiFi.localIP()) + ":2023/config?INTENSITY=25&INTENSITYviaWEB=0 --> LED intensity is set to 25 and sets this intensity value as NOT master setting anymore, which will switch back to the in the web configuration set intensity parameters...\n";
     message = message + "NOTE: The option INTENSITY has to be used together with the option INTENSITYviaWEB. This will ensure, that the automatic Day/Night-mode and the intensity setting that can be set in the internal WordClock web portal is not used at the same time and get disabled.\n\n";
+    message = message + "http://" + IpAddress2String(WiFi.localIP()) + ":2023/intensity --> Show the status of the value INTENSITYviaWEB parameter\n\n";
     message = message + "Set extra words:\n";
     message = message + "http://" + IpAddress2String(WiFi.localIP()) + ":2023/ew/?ew1=1 --> Turns extra word 1 to on\n";
     message = message + "http://" + IpAddress2String(WiFi.localIP()) + ":2023/ew/?ew1=0 --> Turns extra word 1 to off\n";
@@ -4209,7 +4165,6 @@ void handleLEDupdate() {  // LED server pages urls:
     message = message + "http://" + IpAddress2String(WiFi.localIP()) + ":2023/ewstatus/?9 --> Status of extra word 9\n";
     request->send(200, "text/plain", message);
   });
-
 
   ledserver.on("/config", HTTP_GET, [](AsyncWebServerRequest* request) {  // Configure background and time texts color and intensity:
     int paramsNr = request->params();
@@ -4266,7 +4221,6 @@ void handleLEDupdate() {  // LED server pages urls:
     request->send(200, "text/plain", "WordClock config received");
   });
 
-
   ledserver.on("/status", HTTP_GET, [](AsyncWebServerRequest* request) {  // Show the status of all extra words and the color for the background and time texts:
     String message = "R-Time=" + String(redVal_time) + " G-Time=" + String(greenVal_time) + " B-Time=" + String(blueVal_time) + " R-Back=" + String(redVal_back) + " G-Back=" + String(greenVal_back) + " B-Back=" + String(blueVal_back) + " INTENSITY=" + String(intensity);
     message = message + " ew1=" + String(ew1) + " ew2=" + String(ew2) + " ew3=" + String(ew3) + " ew4=" + String(ew4) + " ew5=" + String(ew5) + " ew6=" + String(ew6);
@@ -4274,6 +4228,10 @@ void handleLEDupdate() {  // LED server pages urls:
     request->send(200, "text/plain", message);
   });
 
+  ledserver.on("/intensity", HTTP_GET, [](AsyncWebServerRequest* request) {  // Show the status of all extra words and the color for the background and time texts:
+    String message = String(set_web_intensity);
+    request->send(200, "text/plain", message);
+  });
 
   ledserver.on("/ewstatus", HTTP_GET, [](AsyncWebServerRequest* request) {  // Get the status of the extra words:
     int paramsNr = request->params();
@@ -4325,7 +4283,6 @@ void handleLEDupdate() {  // LED server pages urls:
       }
     }
   });
-
 
   ledserver.on("/ew", HTTP_GET, [](AsyncWebServerRequest* request) {  // Set the extra words:
     int paramsNr = request->params();
@@ -4452,13 +4409,6 @@ void handleLEDupdate() {  // LED server pages urls:
         request->send(200, "text/plain", "Extra word " + p->name() + " set to " + p->value());
         changedvalues = true;
         updatenow = true;
-
-        // Send Telegram message in addition? DO NOT ACTIVATE - NOTE WORKING YET ! // TODO
-        // if ((useTelegram == 1) && (useTelegramEW == 1)) {
-        //   Serial.println("Send Telegram message about changed extra word: " + String(ew) + " set to " + String(p->value()));
-        //   delay(10000);  // Needed to avoid the ESP32 to restart
-        //   bot.sendMessage(CHAT_ID, "Extra word " + String(ew) + " set to " + String(p->value()), "");
-        // }
       } else {
         request->send(200, "text/plain", "INVALID VALUES - MUST BE BETWEEN 0 and 255");
       }

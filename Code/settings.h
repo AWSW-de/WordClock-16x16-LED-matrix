@@ -6,7 +6,7 @@
 // #
 // # Released under license: GNU General Public License v3.0: https://github.com/AWSW-de/WordClock-16x16-LED-matrix/blob/main/LICENSE
 // #
-// # Compatible with WordClock version: V1.4.0
+// # Compatible with WordClock version: V1.5.0
 // #
 // ###########################################################################################################################################
 /*
@@ -50,7 +50,13 @@ Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUMPIXELS, LEDPIN, NEO_GRB + NEO_KHZ
 // ###########################################################################################################################################
 // # LED language layout default: !!! SET YOUR DEFAULT LANGUAGE HERE !!!
 // ###########################################################################################################################################
-int langLEDlayout_default = 0;  // LED language layout default (0 = DE; 1 = EN, 2 = NL, 3 = FR)
+int langLEDlayout_default = 0;  // LED language layout default
+// Available languages:
+// ####################
+// 0 = DE   - GERMAN
+// 1 = EN   - ENGLISH
+// 2 = NL   - DUTCH
+// 3 = FR   - FRENCH
 // NOTE: You may need to use the "Reset WordClock settings"-button to update the value on the device
 
 
@@ -128,7 +134,6 @@ int ew12_default = 0;  // Extra Word 12
 int useshowip_default = 1;      // Show the current ip at boot
 int useTelegram_default = 0;    // Use Telegram support
 int useTelegramID_default = 0;  // React to your own Telegram CHAT_ID only
-int useTelegramEW_default = 0;  // Send a Telegram message on every change of extra words
 
 
 // ###########################################################################################################################################
