@@ -29,7 +29,6 @@
 // #
 // # You will need to add the following libraries to your Arduino IDE to use the project:
 // # - Adafruit NeoPixel      // by Adafruit:                     https://github.com/adafruit/Adafruit_NeoPixel
-// # - WiFiManager            // by tablatronix / tzapu:          https://github.com/tzapu/WiFiManager
 // # - AsyncTCP               // by me-no-dev:                    https://github.com/me-no-dev/AsyncTCP
 // # - ESPAsyncWebServer      // by me-no-dev:                    https://github.com/me-no-dev/ESPAsyncWebServer
 // # - ESPUI                  // by s00500:                       https://github.com/s00500/ESPUI
@@ -39,7 +38,8 @@
 // #
 // ###########################################################################################################################################
 #include <WiFi.h>                  // Used to connect the ESP32 to your WiFi
-#include <WiFiManager.h>           // Used for the WiFi Manager option to be able to connect the WordClock to your WiFi without code changes
+#include <WebServer.h>             // ESP32 OTA update function
+#include <Update.h>                // ESP32 OTA update function
 #include <Adafruit_NeoPixel.h>     // Used to drive the NeoPixel LEDs
 #include "time.h"                  // Used for NTP time requests
 #include <AsyncTCP.h>              // Used for the internal web server
@@ -47,9 +47,6 @@
 #include <DNSServer.h>             // Used for the internal web server
 #include <ESPUI.h>                 // Used for the internal web server
 #include <Preferences.h>           // Used to save the configuration to the ESP32 flash
-#include <WiFiClient.h>            // Used for update function
-#include <WebServer.h>             // Used for update function
-#include <Update.h>                // Used for update function
 #include <WiFiClientSecure.h>      // Telegram support
 #include <UniversalTelegramBot.h>  // Telegram support
 #include <ArduinoJson.h>           // Telegram support
@@ -59,17 +56,17 @@
 // ###########################################################################################################################################
 // # Version number of the code:
 // ###########################################################################################################################################
-const char* WORD_CLOCK_VERSION = "V1.5.0";
+const char* WORD_CLOCK_VERSION = "V1.8.0";
 
 
 // ###########################################################################################################################################
 // # Internal web server settings:
 // ###########################################################################################################################################
 AsyncWebServer server(80);       // Web server for config
-WebServer updserver(2022);       // Web server for OTA updates
+WebServer otaserver(8080);       // Web OTA ESP32 update server
 AsyncWebServer ledserver(2023);  // Web server for LED updates
 const byte DNS_PORT = 53;
-IPAddress apIP(192, 168, 44, 1);
+IPAddress apIP(192, 168, 4, 1);
 DNSServer dnsServer;
 
 
@@ -108,13 +105,19 @@ int set_web_colors = 0;
 int set_web_ew_color = 0;
 int usenightmode, day_time_start, day_time_stop, statusNightMode;
 int useshowip, usesinglemin;
-int statusLabelID, statusNightModeID, sliderBrightnessDayID, switchNightModeID, sliderBrightnessNightID, call_day_time_startID, call_day_time_stopID, intensity_web_HintID, ew_web_HintID, statusLanguageID;
+int statusNightModeID, sliderBrightnessDayID, switchNightModeID, sliderBrightnessNightID, call_day_time_startID, call_day_time_stopID, intensity_web_HintID, ew_web_HintID, statusLanguageID;
 int useTelegram, useTelegramID;
 uint16_t TelegramSwitcher, TelegramSwitcherID;
 char* selectLang;
+String BOTtoken = "XXXXXXXXXX:YYYYYYYYYYYYYYY-ZZZZZZZZZZZZZZZZZZZZ";
+String CHAT_ID = "1234512345";
 String chat_id = CHAT_ID;
 uint16_t text_colour_background;
 uint16_t text_colour_time;
+bool WiFIsetup = false;
+String Timezone = "CET-1CEST,M3.5.0,M10.5.0/3";
+String NTPserver = "pool.ntp.org";
+String ewtext1, ewtext2, ewtext3, ewtext4, ewtext5, ewtext6, ewtext7, ewtext8, ewtext9, ewtext10, ewtext11, ewtext12 = "-";  // Set texts for the extra words 9 to 12:
 
 
 // ###########################################################################################################################################
@@ -134,35 +137,15 @@ void setup() {
   delay(500);
   preferences.begin("wordclock", false);  // Init ESP32 flash
   Serial.println("######################################################################");
-  Serial.print("# WordClock startup of version: ");
-  Serial.println(WORD_CLOCK_VERSION);
+  Serial.println("# WordClock startup of version: " + String(WORD_CLOCK_VERSION));
   Serial.println("######################################################################");
-  getFlashValues();                                     // Read settings from flash
-  strip.begin();                                        // Init the LEDs
-  strip.show();                                         // Turn off the LEDs
-  intensity = intensity_day;                            // Set the intenity to day mode for startup
-  strip.setBrightness(intensity);                       // Set LED brightness
-  startup();                                            // Run startup actions
-  WIFI_login();                                         // WiFiManager
-  WiFiManager1stBootFix();                              // WiFi Manager 1st connect fix
-  ShowIPaddress();                                      // Display the current IP-address
-  configNTPTime();                                      // NTP time setup
-  setupWebInterface();                                  // Generate the configuration page
-  updatenow = true;                                     // Update the display 1x after startup
-  update_display();                                     // Update LED display
-  handleOTAupdate();                                    // Start the ESP32 OTA update server
-  handleLEDupdate();                                    // LED update via web
-  secured_client.setCACert(TELEGRAM_CERTIFICATE_ROOT);  // Add root certificate for api.telegram.org
-  if (useTelegram) {                                    // Telegram support
-    Serial.println("Send initial Telegram message: WordClock " + String(WORD_CLOCK_VERSION) + " start finished");
-    bot.sendMessage(CHAT_ID, "WordClock " + String(WORD_CLOCK_VERSION) + " start finished " + emoStartup + "\n\nPlease use /start to show the commands list.\n\nWeb interface online at: http://" + IpAddress2String(WiFi.localIP()) + "\n\nSmart home web URL examples: http://" + IpAddress2String(WiFi.localIP()) + ":2023", "");
-  }
-  Serial.println("######################################################################");
-  Serial.println("# Web interface online at: http://" + IpAddress2String(WiFi.localIP()));
-  Serial.println("# Smart home web URL examples: http://" + IpAddress2String(WiFi.localIP()) + ":2023");
-  Serial.println("######################################################################");
-  Serial.println("# WordClock startup finished...");
-  Serial.println("######################################################################");
+  getFlashValues();                // Read settings from flash
+  strip.begin();                   // Init the LEDs
+  strip.show();                    // Turn off the LEDs
+  intensity = intensity_day;       // Set the intenity to day mode for startup
+  strip.setBrightness(intensity);  // Set LED brightness
+  startup();                       // Run startup actions
+  WIFI_SETUP();                    // WiFi login and startup of web services
 }
 
 
@@ -170,23 +153,25 @@ void setup() {
 // # Loop function which runs all the time after the startup was done:
 // ###########################################################################################################################################
 void loop() {
-  printLocalTime();
-  if (updatedevice == true) {                       // Allow display updates (normal usage)
-    if (millis() - bot_lasttime > BOT_MTBS) {       // Update only after timeout
-      if (changedvalues == true) setFlashValues();  // Write settings to flash
-      update_display();                             // Update display (1x per minute regulary)
-      if (useTelegram) {                            // Telegram chat action command usage:
-        int numNewMessages = bot.getUpdates(bot.last_message_received + 1);
-        while (numNewMessages) {
-          handleNewMessages(numNewMessages);
-          numNewMessages = bot.getUpdates(bot.last_message_received + 1);
+  if ((WiFIsetup == true) || (testTime == 1)) {
+    printLocalTime();                                 // Get the current time
+    if (updatedevice == true) {                       // Allow display updates (normal usage)
+      if (millis() - bot_lasttime > BOT_MTBS) {       // Update only after timeout
+        if (changedvalues == true) setFlashValues();  // Write settings to flash
+        update_display();                             // Update display (1x per minute regulary)
+        if (useTelegram) {                            // Telegram chat action command usage:
+          int numNewMessages = bot.getUpdates(bot.last_message_received + 1);
+          while (numNewMessages) {
+            handleNewMessages(numNewMessages);
+            numNewMessages = bot.getUpdates(bot.last_message_received + 1);
+          }
         }
+        bot_lasttime = millis();
       }
-      bot_lasttime = millis();
     }
   }
+  if (updatemode == true) otaserver.handleClient();  // ESP32 OTA update
   dnsServer.processNextRequest();                    // Update web server
-  if (updatemode == true) updserver.handleClient();  // ESP32 OTA updates
 }
 
 
@@ -199,9 +184,6 @@ void setupWebInterface() {
   // Section General:
   // ################
   ESPUI.separator("General:");
-
-  // Status label:
-  statusLabelID = ESPUI.label("Status:", ControlColor::Dark, "Operational");
 
   // WordClock version:
   ESPUI.label("Version", ControlColor::None, WORD_CLOCK_VERSION);
@@ -246,7 +228,7 @@ void setupWebInterface() {
   intensity_web_HintID = ESPUI.label("Manual settings disabled due to web URL usage:", ControlColor::Alizarin, "Restart WordClock or deactivate web control usage via http://" + IpAddress2String(WiFi.localIP()) + ":2023/config?INTENSITYviaWEB=0");
   ESPUI.updateVisibility(intensity_web_HintID, false);
 
-  // Use night mode function:
+  // Show single minutes to display the minute exact time function:
   ESPUI.switcher("Show single minutes to display the minute exact time", &switchSingleMinutes, ControlColor::Dark, usesinglemin);
 
 
@@ -266,324 +248,153 @@ void setupWebInterface() {
 
   // ################################################################## DE:
   if (langLEDlayout == 0) {  // DE:
-    // Color Extra Word ew1:
-    char hex_ew1[7] = { 0 };
-    sprintf(hex_ew1, "#%02X%02X%02X", redVal_ew1, greenVal_ew1, blueVal_ew1);
-    uint16_t text_colour_ew1;
-    text_colour_ew1 = ESPUI.text("ALARM", colCallew1, ControlColor::Dark, hex_ew1);
-    ESPUI.setInputType(text_colour_ew1, "color");
+    ewtext1 = "ALARM";
+    ewtext2 = "GEBURTSTAG";
+    ewtext3 = "MÜLL RAUS BRINGEN";
+    ewtext4 = "AUTO";
+    ewtext5 = "FEIERTAG";
+    ewtext6 = "FORMEL1";
+    ewtext7 = "GELBER SACK";
+    ewtext8 = "URLAUB";
+    ewtext9 = "WERKSTATT";
+    ewtext10 = "ZEIT ZUM ZOCKEN";
+    ewtext11 = "FRISEUR";
+    ewtext12 = "TERMIN";
+  }
 
-    // Color Extra Word ew2:
-    char hex_ew2[7] = { 0 };
-    sprintf(hex_ew2, "#%02X%02X%02X", redVal_ew2, greenVal_ew2, blueVal_ew2);
-    uint16_t text_colour_ew2;
-    text_colour_ew2 = ESPUI.text("GEBURTSTAG", colCallew2, ControlColor::Dark, hex_ew2);
-    ESPUI.setInputType(text_colour_ew2, "color");
+  // ################################################################## EN:
+  if (langLEDlayout == 1) {  // EN:
+    ewtext1 = "COME HERE";
+    ewtext2 = "LUNCH TIME";
+    ewtext3 = "ALARM";
+    ewtext4 = "GARBAGE";
+    ewtext5 = "HOLIDAY";
+    ewtext6 = "TEMPERATURE";
+    ewtext7 = "DATE";
+    ewtext8 = "BIRTHDAY";
+    ewtext9 = "DOORBELL";
+  }
 
-    // Color Extra Word ew3:
-    char hex_ew3[7] = { 0 };
-    sprintf(hex_ew3, "#%02X%02X%02X", redVal_ew3, greenVal_ew3, blueVal_ew3);
-    uint16_t text_colour_ew3;
-    text_colour_ew3 = ESPUI.text("MÜLL RAUS BRINGEN", colCallew3, ControlColor::Dark, hex_ew3);
-    ESPUI.setInputType(text_colour_ew3, "color");
+  // ################################################################## NL:
+  if (langLEDlayout == 2) {  // NL:
+    ewtext1 = "KOM HIER";
+    ewtext2 = "LUNCH TIJD";
+    ewtext3 = "ALARM";
+    ewtext4 = "AFVAL";
+    ewtext5 = "VAKANTIE";
+    ewtext6 = "TEMPERATUUR";
+    ewtext7 = "DATUM";
+    ewtext8 = "VERJAARDAG";
+    ewtext9 = "DEURBEL";
+  }
 
-    // Color Extra Word ew4:
-    char hex_ew4[7] = { 0 };
-    sprintf(hex_ew4, "#%02X%02X%02X", redVal_ew4, greenVal_ew4, blueVal_ew4);
-    uint16_t text_colour_ew4;
-    text_colour_ew4 = ESPUI.text("AUTO", colCallew4, ControlColor::Dark, hex_ew4);
-    ESPUI.setInputType(text_colour_ew4, "color");
+  // ################################################################## FR:
+  if (langLEDlayout == 3) {  // FR:
+    ewtext1 = "ALARME";
+    ewtext2 = "ANNIVERSAIRE";
+    ewtext3 = "POUBELLE";
+    ewtext4 = "A TABLE";
+    ewtext5 = "VACANCES";
+    ewtext6 = "VIENS ICI";
+    ewtext7 = "SONNETTE";
+    ewtext8 = "TEMPERATURE";
+    ewtext9 = "DATE";
+  }
 
-    // Color Extra Word ew5:
-    char hex_ew5[7] = { 0 };
-    sprintf(hex_ew5, "#%02X%02X%02X", redVal_ew5, greenVal_ew5, blueVal_ew5);
-    uint16_t text_colour_ew5;
-    text_colour_ew5 = ESPUI.text("FEIERTAG", colCallew5, ControlColor::Dark, hex_ew5);
-    ESPUI.setInputType(text_colour_ew5, "color");
+  // Get the selected colors for the extra words 1 to 12:
 
-    // Color Extra Word ew6:
-    char hex_ew6[7] = { 0 };
-    sprintf(hex_ew6, "#%02X%02X%02X", redVal_ew6, greenVal_ew6, blueVal_ew6);
-    uint16_t text_colour_ew6;
-    text_colour_ew6 = ESPUI.text("FORMEL1", colCallew6, ControlColor::Dark, hex_ew6);
-    ESPUI.setInputType(text_colour_ew6, "color");
+  // Color Extra Word ew1:
+  char hex_ew1[7] = { 0 };
+  sprintf(hex_ew1, "#%02X%02X%02X", redVal_ew1, greenVal_ew1, blueVal_ew1);
+  uint16_t text_colour_ew1;
+  text_colour_ew1 = ESPUI.text(ewtext1.c_str(), colCallew, ControlColor::Dark, hex_ew1);
+  ESPUI.setInputType(text_colour_ew1, "color");
 
-    // Color Extra Word ew7:
-    char hex_ew7[7] = { 0 };
-    sprintf(hex_ew7, "#%02X%02X%02X", redVal_ew7, greenVal_ew7, blueVal_ew7);
-    uint16_t text_colour_ew7;
-    text_colour_ew7 = ESPUI.text("GELBER SACK", colCallew7, ControlColor::Dark, hex_ew7);
-    ESPUI.setInputType(text_colour_ew7, "color");
+  // Color Extra Word ew2:
+  char hex_ew2[7] = { 0 };
+  sprintf(hex_ew2, "#%02X%02X%02X", redVal_ew2, greenVal_ew2, blueVal_ew2);
+  uint16_t text_colour_ew2;
+  text_colour_ew2 = ESPUI.text(ewtext2.c_str(), colCallew, ControlColor::Dark, hex_ew2);
+  ESPUI.setInputType(text_colour_ew2, "color");
 
-    // Color Extra Word ew8:
-    char hex_ew8[7] = { 0 };
-    sprintf(hex_ew8, "#%02X%02X%02X", redVal_ew8, greenVal_ew8, blueVal_ew8);
-    uint16_t text_colour_ew8;
-    text_colour_ew8 = ESPUI.text("URLAUB", colCallew8, ControlColor::Dark, hex_ew8);
-    ESPUI.setInputType(text_colour_ew8, "color");
+  // Color Extra Word ew3:
+  char hex_ew3[7] = { 0 };
+  sprintf(hex_ew3, "#%02X%02X%02X", redVal_ew3, greenVal_ew3, blueVal_ew3);
+  uint16_t text_colour_ew3;
+  text_colour_ew3 = ESPUI.text(ewtext3.c_str(), colCallew, ControlColor::Dark, hex_ew3);
+  ESPUI.setInputType(text_colour_ew3, "color");
 
-    // Color Extra Word ew9:
-    char hex_ew9[7] = { 0 };
-    sprintf(hex_ew9, "#%02X%02X%02X", redVal_ew9, greenVal_ew9, blueVal_ew9);
-    uint16_t text_colour_ew9;
-    text_colour_ew9 = ESPUI.text("WERKSTATT", colCallew9, ControlColor::Dark, hex_ew9);
-    ESPUI.setInputType(text_colour_ew9, "color");
+  // Color Extra Word ew4:
+  char hex_ew4[7] = { 0 };
+  sprintf(hex_ew4, "#%02X%02X%02X", redVal_ew4, greenVal_ew4, blueVal_ew4);
+  uint16_t text_colour_ew4;
+  text_colour_ew4 = ESPUI.text(ewtext4.c_str(), colCallew, ControlColor::Dark, hex_ew4);
+  ESPUI.setInputType(text_colour_ew4, "color");
 
+  // Color Extra Word ew5:
+  char hex_ew5[7] = { 0 };
+  sprintf(hex_ew5, "#%02X%02X%02X", redVal_ew5, greenVal_ew5, blueVal_ew5);
+  uint16_t text_colour_ew5;
+  text_colour_ew5 = ESPUI.text(ewtext5.c_str(), colCallew, ControlColor::Dark, hex_ew5);
+  ESPUI.setInputType(text_colour_ew5, "color");
+
+  // Color Extra Word ew6:
+  char hex_ew6[7] = { 0 };
+  sprintf(hex_ew6, "#%02X%02X%02X", redVal_ew6, greenVal_ew6, blueVal_ew6);
+  uint16_t text_colour_ew6;
+  text_colour_ew6 = ESPUI.text(ewtext6.c_str(), colCallew, ControlColor::Dark, hex_ew6);
+  ESPUI.setInputType(text_colour_ew6, "color");
+
+  // Color Extra Word ew7:
+  char hex_ew7[7] = { 0 };
+  sprintf(hex_ew7, "#%02X%02X%02X", redVal_ew7, greenVal_ew7, blueVal_ew7);
+  uint16_t text_colour_ew7;
+  text_colour_ew7 = ESPUI.text(ewtext7.c_str(), colCallew, ControlColor::Dark, hex_ew7);
+  ESPUI.setInputType(text_colour_ew7, "color");
+
+  // Color Extra Word ew8:
+  char hex_ew8[7] = { 0 };
+  sprintf(hex_ew8, "#%02X%02X%02X", redVal_ew8, greenVal_ew8, blueVal_ew8);
+  uint16_t text_colour_ew8;
+  text_colour_ew8 = ESPUI.text(ewtext8.c_str(), colCallew, ControlColor::Dark, hex_ew8);
+  ESPUI.setInputType(text_colour_ew8, "color");
+
+  // Color Extra Word ew9:
+  char hex_ew9[7] = { 0 };
+  sprintf(hex_ew9, "#%02X%02X%02X", redVal_ew9, greenVal_ew9, blueVal_ew9);
+  uint16_t text_colour_ew9;
+  text_colour_ew9 = ESPUI.text(ewtext9.c_str(), colCallew, ControlColor::Dark, hex_ew9);
+  ESPUI.setInputType(text_colour_ew9, "color");
+
+  if (langLEDlayout == 0) {  // DE has 12 extra words only:
     // Color Extra Word ew10:
     char hex_ew10[7] = { 0 };
     sprintf(hex_ew10, "#%02X%02X%02X", redVal_ew10, greenVal_ew10, blueVal_ew10);
     uint16_t text_colour_ew10;
-    text_colour_ew10 = ESPUI.text("ZEIT ZUM ZOCKEN", colCallew10, ControlColor::Dark, hex_ew10);
+    text_colour_ew10 = ESPUI.text(ewtext10.c_str(), colCallew, ControlColor::Dark, hex_ew10);
     ESPUI.setInputType(text_colour_ew10, "color");
 
     // Color Extra Word ew11:
     char hex_ew11[7] = { 0 };
     sprintf(hex_ew11, "#%02X%02X%02X", redVal_ew11, greenVal_ew11, blueVal_ew11);
     uint16_t text_colour_ew11;
-    text_colour_ew11 = ESPUI.text("FRISEUR", colCallew11, ControlColor::Dark, hex_ew11);
+    text_colour_ew11 = ESPUI.text(ewtext11.c_str(), colCallew, ControlColor::Dark, hex_ew11);
     ESPUI.setInputType(text_colour_ew11, "color");
 
     // Color Extra Word ew12:
     char hex_ew12[7] = { 0 };
     sprintf(hex_ew12, "#%02X%02X%02X", redVal_ew12, greenVal_ew12, blueVal_ew12);
     uint16_t text_colour_ew12;
-    text_colour_ew12 = ESPUI.text("TERMIN", colCallew12, ControlColor::Dark, hex_ew12);
+    text_colour_ew12 = ESPUI.text(ewtext12.c_str(), colCallew, ControlColor::Dark, hex_ew12);
     ESPUI.setInputType(text_colour_ew12, "color");
   }
 
-  // ################################################################## EN:
-  if (langLEDlayout == 1) {  // EN:
-
-    // ew1 - COME HERE text
-    // ew2 - LUNCH TIME text
-    // ew3 - ALARM text
-    // ew4 - GARBAGE text
-    // ew5 - HOLIDAY text
-    // ew6 - TEMPERATURE text
-    // ew7 - DATE text
-    // ew8 - BIRTHDAY text
-    // ew9 - DOORBELL text
-
-    // Color Extra Word ew1:
-    char hex_ew1[7] = { 0 };
-    sprintf(hex_ew1, "#%02X%02X%02X", redVal_ew1, greenVal_ew1, blueVal_ew1);
-    uint16_t text_colour_ew1;
-    text_colour_ew1 = ESPUI.text("COME HERE", colCallew1, ControlColor::Dark, hex_ew1);
-    ESPUI.setInputType(text_colour_ew1, "color");
-
-    // Color Extra Word ew2:
-    char hex_ew2[7] = { 0 };
-    sprintf(hex_ew2, "#%02X%02X%02X", redVal_ew2, greenVal_ew2, blueVal_ew2);
-    uint16_t text_colour_ew2;
-    text_colour_ew2 = ESPUI.text("LUNCH TIME", colCallew2, ControlColor::Dark, hex_ew2);
-    ESPUI.setInputType(text_colour_ew2, "color");
-
-    // Color Extra Word ew3:
-    char hex_ew3[7] = { 0 };
-    sprintf(hex_ew3, "#%02X%02X%02X", redVal_ew3, greenVal_ew3, blueVal_ew3);
-    uint16_t text_colour_ew3;
-    text_colour_ew3 = ESPUI.text("ALARM", colCallew3, ControlColor::Dark, hex_ew3);
-    ESPUI.setInputType(text_colour_ew3, "color");
-
-    // Color Extra Word ew4:
-    char hex_ew4[7] = { 0 };
-    sprintf(hex_ew4, "#%02X%02X%02X", redVal_ew4, greenVal_ew4, blueVal_ew4);
-    uint16_t text_colour_ew4;
-    text_colour_ew4 = ESPUI.text("GARBAGE", colCallew4, ControlColor::Dark, hex_ew4);
-    ESPUI.setInputType(text_colour_ew4, "color");
-
-    // Color Extra Word ew5:
-    char hex_ew5[7] = { 0 };
-    sprintf(hex_ew5, "#%02X%02X%02X", redVal_ew5, greenVal_ew5, blueVal_ew5);
-    uint16_t text_colour_ew5;
-    text_colour_ew5 = ESPUI.text("HOLIDAY", colCallew5, ControlColor::Dark, hex_ew5);
-    ESPUI.setInputType(text_colour_ew5, "color");
-
-    // Color Extra Word ew6:
-    char hex_ew6[7] = { 0 };
-    sprintf(hex_ew6, "#%02X%02X%02X", redVal_ew6, greenVal_ew6, blueVal_ew6);
-    uint16_t text_colour_ew6;
-    text_colour_ew6 = ESPUI.text("TEMPERATURE", colCallew6, ControlColor::Dark, hex_ew6);
-    ESPUI.setInputType(text_colour_ew6, "color");
-
-    // Color Extra Word ew7:
-    char hex_ew7[7] = { 0 };
-    sprintf(hex_ew7, "#%02X%02X%02X", redVal_ew7, greenVal_ew7, blueVal_ew7);
-    uint16_t text_colour_ew7;
-    text_colour_ew7 = ESPUI.text("DATE", colCallew7, ControlColor::Dark, hex_ew7);
-    ESPUI.setInputType(text_colour_ew7, "color");
-
-    // Color Extra Word ew8:
-    char hex_ew8[7] = { 0 };
-    sprintf(hex_ew8, "#%02X%02X%02X", redVal_ew8, greenVal_ew8, blueVal_ew8);
-    uint16_t text_colour_ew8;
-    text_colour_ew8 = ESPUI.text("BIRTHDAY", colCallew8, ControlColor::Dark, hex_ew8);
-    ESPUI.setInputType(text_colour_ew8, "color");
-
-    // Color Extra Word ew9:
-    char hex_ew9[7] = { 0 };
-    sprintf(hex_ew9, "#%02X%02X%02X", redVal_ew9, greenVal_ew9, blueVal_ew9);
-    uint16_t text_colour_ew9;
-    text_colour_ew9 = ESPUI.text("DOORBELL", colCallew9, ControlColor::Dark, hex_ew9);
-    ESPUI.setInputType(text_colour_ew9, "color");
-  }
-
-  // ################################################################## NL:
-  if (langLEDlayout == 2) {  // NL:
-    // ew1 - KOM HIER text
-    // ew2 - LUNCH TIJD text
-    // ew3 - ALARM text
-    // ew4 - AFVAL text
-    // ew5 - VAKANTIE text
-    // ew6 - TEMPERATUUR text
-    // ew7 - DATUM text
-    // ew8 - VERJAARDAG text
-    // ew9 - DEURBEL text
-
-    // Color Extra Word ew1:
-    char hex_ew1[7] = { 0 };
-    sprintf(hex_ew1, "#%02X%02X%02X", redVal_ew1, greenVal_ew1, blueVal_ew1);
-    uint16_t text_colour_ew1;
-    text_colour_ew1 = ESPUI.text("KOM HIER", colCallew1, ControlColor::Dark, hex_ew1);
-    ESPUI.setInputType(text_colour_ew1, "color");
-
-    // Color Extra Word ew2:
-    char hex_ew2[7] = { 0 };
-    sprintf(hex_ew2, "#%02X%02X%02X", redVal_ew2, greenVal_ew2, blueVal_ew2);
-    uint16_t text_colour_ew2;
-    text_colour_ew2 = ESPUI.text("LUNCH TIJD", colCallew2, ControlColor::Dark, hex_ew2);
-    ESPUI.setInputType(text_colour_ew2, "color");
-
-    // Color Extra Word ew3:
-    char hex_ew3[7] = { 0 };
-    sprintf(hex_ew3, "#%02X%02X%02X", redVal_ew3, greenVal_ew3, blueVal_ew3);
-    uint16_t text_colour_ew3;
-    text_colour_ew3 = ESPUI.text("ALARM", colCallew3, ControlColor::Dark, hex_ew3);
-    ESPUI.setInputType(text_colour_ew3, "color");
-
-    // Color Extra Word ew4:
-    char hex_ew4[7] = { 0 };
-    sprintf(hex_ew4, "#%02X%02X%02X", redVal_ew4, greenVal_ew4, blueVal_ew4);
-    uint16_t text_colour_ew4;
-    text_colour_ew4 = ESPUI.text("AFVAL", colCallew4, ControlColor::Dark, hex_ew4);
-    ESPUI.setInputType(text_colour_ew4, "color");
-
-    // Color Extra Word ew5:
-    char hex_ew5[7] = { 0 };
-    sprintf(hex_ew5, "#%02X%02X%02X", redVal_ew5, greenVal_ew5, blueVal_ew5);
-    uint16_t text_colour_ew5;
-    text_colour_ew5 = ESPUI.text("VAKANTIE", colCallew5, ControlColor::Dark, hex_ew5);
-    ESPUI.setInputType(text_colour_ew5, "color");
-
-    // Color Extra Word ew6:
-    char hex_ew6[7] = { 0 };
-    sprintf(hex_ew6, "#%02X%02X%02X", redVal_ew6, greenVal_ew6, blueVal_ew6);
-    uint16_t text_colour_ew6;
-    text_colour_ew6 = ESPUI.text("TEMPERATUUR", colCallew6, ControlColor::Dark, hex_ew6);
-    ESPUI.setInputType(text_colour_ew6, "color");
-
-    // Color Extra Word ew7:
-    char hex_ew7[7] = { 0 };
-    sprintf(hex_ew7, "#%02X%02X%02X", redVal_ew7, greenVal_ew7, blueVal_ew7);
-    uint16_t text_colour_ew7;
-    text_colour_ew7 = ESPUI.text("DATUM", colCallew7, ControlColor::Dark, hex_ew7);
-    ESPUI.setInputType(text_colour_ew7, "color");
-
-    // Color Extra Word ew8:
-    char hex_ew8[7] = { 0 };
-    sprintf(hex_ew8, "#%02X%02X%02X", redVal_ew8, greenVal_ew8, blueVal_ew8);
-    uint16_t text_colour_ew8;
-    text_colour_ew8 = ESPUI.text("VERJAARDAG", colCallew8, ControlColor::Dark, hex_ew8);
-    ESPUI.setInputType(text_colour_ew8, "color");
-
-    // Color Extra Word ew9:
-    char hex_ew9[7] = { 0 };
-    sprintf(hex_ew9, "#%02X%02X%02X", redVal_ew9, greenVal_ew9, blueVal_ew9);
-    uint16_t text_colour_ew9;
-    text_colour_ew9 = ESPUI.text("DEURBEL", colCallew9, ControlColor::Dark, hex_ew9);
-    ESPUI.setInputType(text_colour_ew9, "color");
-  }
-
-  // ################################################################## FR:
-  if (langLEDlayout == 3) {  // FR:
-
-    // ew1 - ALARME text
-    // ew2 - ANNIVERSAIRE text
-    // ew3 - POUBELLE text
-    // ew4 - A TABLE text
-    // ew5 - VACANCES text
-    // ew6 - VIENS ICI text
-    // ew7 - SONNETTE text
-    // ew8 - TEMPERATURE text
-    // ew9 - DATE text
-
-    // Color Extra Word ew1:
-    char hex_ew1[7] = { 0 };
-    sprintf(hex_ew1, "#%02X%02X%02X", redVal_ew1, greenVal_ew1, blueVal_ew1);
-    uint16_t text_colour_ew1;
-    text_colour_ew1 = ESPUI.text("ALARME", colCallew1, ControlColor::Dark, hex_ew1);
-    ESPUI.setInputType(text_colour_ew1, "color");
-
-    // Color Extra Word ew2:
-    char hex_ew2[7] = { 0 };
-    sprintf(hex_ew2, "#%02X%02X%02X", redVal_ew2, greenVal_ew2, blueVal_ew2);
-    uint16_t text_colour_ew2;
-    text_colour_ew2 = ESPUI.text("ANNIVERSAIRE", colCallew2, ControlColor::Dark, hex_ew2);
-    ESPUI.setInputType(text_colour_ew2, "color");
-
-    // Color Extra Word ew3:
-    char hex_ew3[7] = { 0 };
-    sprintf(hex_ew3, "#%02X%02X%02X", redVal_ew3, greenVal_ew3, blueVal_ew3);
-    uint16_t text_colour_ew3;
-    text_colour_ew3 = ESPUI.text("POUBELLE", colCallew3, ControlColor::Dark, hex_ew3);
-    ESPUI.setInputType(text_colour_ew3, "color");
-
-    // Color Extra Word ew4:
-    char hex_ew4[7] = { 0 };
-    sprintf(hex_ew4, "#%02X%02X%02X", redVal_ew4, greenVal_ew4, blueVal_ew4);
-    uint16_t text_colour_ew4;
-    text_colour_ew4 = ESPUI.text("A TABLE", colCallew4, ControlColor::Dark, hex_ew4);
-    ESPUI.setInputType(text_colour_ew4, "color");
-
-    // Color Extra Word ew5:
-    char hex_ew5[7] = { 0 };
-    sprintf(hex_ew5, "#%02X%02X%02X", redVal_ew5, greenVal_ew5, blueVal_ew5);
-    uint16_t text_colour_ew5;
-    text_colour_ew5 = ESPUI.text("VACANCES", colCallew5, ControlColor::Dark, hex_ew5);
-    ESPUI.setInputType(text_colour_ew5, "color");
-
-    // Color Extra Word ew6:
-    char hex_ew6[7] = { 0 };
-    sprintf(hex_ew6, "#%02X%02X%02X", redVal_ew6, greenVal_ew6, blueVal_ew6);
-    uint16_t text_colour_ew6;
-    text_colour_ew6 = ESPUI.text("VIENS ICI", colCallew6, ControlColor::Dark, hex_ew6);
-    ESPUI.setInputType(text_colour_ew6, "color");
-
-    // Color Extra Word ew7:
-    char hex_ew7[7] = { 0 };
-    sprintf(hex_ew7, "#%02X%02X%02X", redVal_ew7, greenVal_ew7, blueVal_ew7);
-    uint16_t text_colour_ew7;
-    text_colour_ew7 = ESPUI.text("SONNETTE", colCallew7, ControlColor::Dark, hex_ew7);
-    ESPUI.setInputType(text_colour_ew7, "color");
-
-    // Color Extra Word ew8:
-    char hex_ew8[7] = { 0 };
-    sprintf(hex_ew8, "#%02X%02X%02X", redVal_ew8, greenVal_ew8, blueVal_ew8);
-    uint16_t text_colour_ew8;
-    text_colour_ew8 = ESPUI.text("TEMPERATURE", colCallew8, ControlColor::Dark, hex_ew8);
-    ESPUI.setInputType(text_colour_ew8, "color");
-
-    // Color Extra Word ew9:
-    char hex_ew9[7] = { 0 };
-    sprintf(hex_ew9, "#%02X%02X%02X", redVal_ew9, greenVal_ew9, blueVal_ew9);
-    uint16_t text_colour_ew9;
-    text_colour_ew9 = ESPUI.text("DATE", colCallew9, ControlColor::Dark, hex_ew9);
-    ESPUI.setInputType(text_colour_ew9, "color");
-  }
 
   // Show note when extra word color is currently controlled via web-url usage and these internal settings are not in sync (yet):
   ew_web_HintID = ESPUI.label("Manual extra word color settings may not be in sync (yet):", ControlColor::Alizarin, "Due to to web URL usage of the extra word colors the here shown color settings may not be in sync. Restart the WordClock to update the values.");
   ESPUI.updateVisibility(ew_web_HintID, false);
+
+
 
   // Section WiFi:
   // #############
@@ -629,10 +440,16 @@ void setupWebInterface() {
     ESPUI.label("Status:", ControlColor::Dark, "Telegram not configured yet. See intructions in settings.h");
   } else {
     // Use Telegram support:
-    TelegramSwitcher = ESPUI.switcher("Use Telegram support", &switchTelegram, ControlColor::Dark, useTelegram);
+    TelegramSwitcher = ESPUI.switcher("Use Telegram support (change forces restart)", &switchTelegram, ControlColor::Dark, useTelegram);
 
     // Reduce Telegram support to your own CHAT_ID:
     TelegramSwitcherID = ESPUI.switcher("React to your own Telegram ID only", &switchTelegramID, ControlColor::Dark, useTelegramID);
+
+    // Your Telegram BOTtoken
+    ESPUI.label("Your Telegram bot token:", ControlColor::Dark, BOTtoken);
+
+    // Your Telegram chat id:
+    ESPUI.label("Your Telegram chat id:", ControlColor::Dark, CHAT_ID);
   }
 
 
@@ -660,10 +477,7 @@ void setupWebInterface() {
   ESPUI.button("Activate update mode", &buttonUpdate, ControlColor::Dark, "Activate update mode", (void*)1);
 
   // Update URL
-  ESPUI.label("Update URL", ControlColor::Dark, "http://" + IpAddress2String(WiFi.localIP()) + ":2022/ota");
-
-  // Update User account
-  ESPUI.label("Update account", ControlColor::Dark, "Username: WordClock   /   Password: 16x16");
+  ESPUI.label("Update URL", ControlColor::Dark, "http://" + IpAddress2String(WiFi.localIP()) + ":8080");
 
 
 
@@ -693,13 +507,13 @@ void setupWebInterface() {
   ESPUI.separator("Maintenance:");
 
   // Restart WordClock:
-  ESPUI.button("Restart", &buttonRestart, ControlColor::Dark, "Restart", (void*)1);
+  ESPUI.button("Restart WordClock", &buttonRestart, ControlColor::Dark, "Restart", (void*)1);
 
-  // Reset WiFi settings:
-  ESPUI.button("Reset WiFi settings", &buttonWiFiReset, ControlColor::Dark, "Reset WiFi settings", (void*)2);
+  // Reset WiFi and initial settings:
+  ESPUI.button("Reset settings to enter initial values again", &buttonWiFiReset, ControlColor::Dark, "Reset WiFi, language, time server, Telegram settings", (void*)2);
 
   // Reset WordClock settings:
-  ESPUI.button("Reset WordClock settings", &buttonWordClockReset, ControlColor::Dark, "Reset WordClock settings", (void*)3);
+  ESPUI.button("Reset WordClock LED and color settings", &buttonWordClockReset, ControlColor::Dark, "Reset WordClock LED and color settings", (void*)3);
 
 
   // Update night mode status text on startup:
@@ -723,7 +537,7 @@ void setupWebInterface() {
 // ###########################################################################################################################################
 void getFlashValues() {
   if (debugmode == 1) Serial.println("Read settings from flash: START");
-  langLEDlayout = preferences.getUInt("langLEDlayout", langLEDlayout_default);
+  langLEDlayout = preferences.getUInt("langLEDlayout", 0);
   redVal_time = preferences.getUInt("redVal_time", redVal_time_default);
   greenVal_time = preferences.getUInt("greenVal_time", greenVal_time_default);
   blueVal_time = preferences.getUInt("blueVal_time", blueVal_time_default);
@@ -775,18 +589,23 @@ void getFlashValues() {
   redVal_ew12 = preferences.getUInt("redVal_ew12", redVal_ew12_default);
   greenVal_ew12 = preferences.getUInt("greenVal_ew12", greenVal_ew12_default);
   blueVal_ew12 = preferences.getUInt("blueVal_ew12", blueVal_ew12_default);
-  ew1 = preferences.getUInt("ew1", ew1_default);
-  ew2 = preferences.getUInt("ew2", ew2_default);
-  ew3 = preferences.getUInt("ew3", ew3_default);
-  ew4 = preferences.getUInt("ew4", ew4_default);
-  ew5 = preferences.getUInt("ew5", ew5_default);
-  ew6 = preferences.getUInt("ew6", ew6_default);
-  ew7 = preferences.getUInt("ew7", ew7_default);
-  ew8 = preferences.getUInt("ew8", ew8_default);
-  ew9 = preferences.getUInt("ew9", ew9_default);
-  ew10 = preferences.getUInt("ew10", ew10_default);
-  ew11 = preferences.getUInt("ew11", ew11_default);
-  ew12 = preferences.getUInt("ew12", ew12_default);
+  ew1 = preferences.getUInt("ew1", 0);
+  ew2 = preferences.getUInt("ew2", 0);
+  ew3 = preferences.getUInt("ew3", 0);
+  ew4 = preferences.getUInt("ew4", 0);
+  ew5 = preferences.getUInt("ew5", 0);
+  ew6 = preferences.getUInt("ew6", 0);
+  ew7 = preferences.getUInt("ew7", 0);
+  ew8 = preferences.getUInt("ew8", 0);
+  ew9 = preferences.getUInt("ew9", 0);
+  ew10 = preferences.getUInt("ew10", 0);
+  ew11 = preferences.getUInt("ew11", 0);
+  ew12 = preferences.getUInt("ew12", 0);
+  BOTtoken = preferences.getString("iBotToken", "");
+  CHAT_ID = preferences.getString("iChatID", "");
+  bot.updateToken(String(BOTtoken));
+  Timezone = preferences.getString("TimeZone", Timezone);
+  NTPserver = preferences.getString("TimeServer", NTPserver);
   if (debugmode == 1) Serial.println("Read settings from flash: END");
 }
 
@@ -877,6 +696,49 @@ void setFlashValues() {
 
 
 // ###########################################################################################################################################
+// # GUI: Restart the WordClock:
+// ###########################################################################################################################################
+void buttonRestart(Control* sender, int type, void* param) {
+  updatedevice = false;
+  delay(250);
+  if (changedvalues == true) {
+    setFlashValues();  // Write settings to flash
+    delay(250);
+  }
+  preferences.end();
+  clear_display_background();
+  ResetTextLEDs(strip.Color(0, 255, 0));
+  strip.show();
+  delay(1000);
+  ESP.restart();
+}
+
+
+// ###########################################################################################################################################
+// # GUI: Reset the WiFi settings of the WordClock:
+// ###########################################################################################################################################
+void buttonWiFiReset(Control* sender, int type, void* param) {
+  updatedevice = false;
+  Serial.println("Status: WIFI SETTINGS RESET REQUEST");
+  ResetTextLEDs(strip.Color(0, 255, 0));
+  SetWLAN(strip.Color(0, 255, 0));
+  strip.show();
+  delay(1000);
+  WiFi.disconnect();
+  delay(1000);
+  preferences.putString("WIFIssid", "");                // Reset WiFi SSID
+  preferences.putString("WIFIpass", "");                // Reste WiFi password
+  preferences.putUInt("useshowip", useshowip_default);  // Show IP-address again
+  preferences.end();
+  Serial.println("####################################################################################################");
+  Serial.println("# WIFI SETTING WERE SET TO DEFAULT... WORDCLOCK WILL NOW RESTART... PLEASE CONFIGURE WIFI AGAIN... #");
+  Serial.println("####################################################################################################");
+  delay(500);
+  ESP.restart();
+}
+
+
+// ###########################################################################################################################################
 // # GUI: Reset the WordClock settings:
 // ###########################################################################################################################################
 int WordClockResetCounter = 0;
@@ -889,9 +751,19 @@ void buttonWordClockReset(Control* sender, int type, void* param) {
     case B_UP:
       if (WordClockResetCounter == 1) {
         Serial.println("Status: WORDCLOCK SETTINGS RESET REQUEST EXECUTED");
+        // Save stored values for WiFi and language:
+        String tempDelWiFiSSID = preferences.getString("WIFIssid");
+        String tempDelWiFiPASS = preferences.getString("WIFIpass");
+        int tempDelLANG = preferences.getUInt("langLEDlayout");
         preferences.clear();
-        delay(1000);
-        preferences.putUInt("langLEDlayout", langLEDlayout_default);
+        delay(100);
+        preferences.putString("WIFIssid", tempDelWiFiSSID);  // Restore entered WiFi SSID
+        preferences.putString("WIFIpass", tempDelWiFiPASS);  // Restore entered WiFi password
+        preferences.putUInt("langLEDlayout", tempDelLANG);   // Restore entered language
+        preferences.putString("iBotToken", BOTtoken);
+        preferences.putString("iChatID", CHAT_ID);
+        preferences.putString("TimeZone", Timezone);
+        preferences.putString("TimeServer", NTPserver);
         preferences.putUInt("redVal_time", redVal_time_default);
         preferences.putUInt("greenVal_time", greenVal_time_default);
         preferences.putUInt("blueVal_time", blueVal_time_default);
@@ -943,21 +815,21 @@ void buttonWordClockReset(Control* sender, int type, void* param) {
         preferences.putUInt("redVal_ew12", redVal_ew12_default);
         preferences.putUInt("greenVal_ew12", greenVal_ew12_default);
         preferences.putUInt("blueVal_ew12", blueVal_ew12_default);
-        preferences.putUInt("ew1", ew1_default);
-        preferences.putUInt("ew2", ew2_default);
-        preferences.putUInt("ew3", ew3_default);
-        preferences.putUInt("ew4", ew4_default);
-        preferences.putUInt("ew5", ew5_default);
-        preferences.putUInt("ew6", ew6_default);
-        preferences.putUInt("ew7", ew7_default);
-        preferences.putUInt("ew8", ew8_default);
-        preferences.putUInt("ew9", ew9_default);
-        preferences.putUInt("ew10", ew10_default);
-        preferences.putUInt("ew11", ew11_default);
-        preferences.putUInt("ew12", ew12_default);
+        preferences.putUInt("ew1", 0);
+        preferences.putUInt("ew2", 0);
+        preferences.putUInt("ew3", 0);
+        preferences.putUInt("ew4", 0);
+        preferences.putUInt("ew5", 0);
+        preferences.putUInt("ew6", 0);
+        preferences.putUInt("ew7", 0);
+        preferences.putUInt("ew8", 0);
+        preferences.putUInt("ew9", 0);
+        preferences.putUInt("ew10", 0);
+        preferences.putUInt("ew11", 0);
+        preferences.putUInt("ew12", 0);
         delay(1000);
         preferences.end();
-        back_color();
+        clear_display_background();
         redVal_time = 0;
         greenVal_time = 255;
         blueVal_time = 0;
@@ -986,8 +858,7 @@ void buttonWordClockReset(Control* sender, int type, void* param) {
       } else {
         Serial.println("Status: WORDCLOCK SETTINGS RESET REQUEST");
         ESPUI.updateButton(sender->id, "! Press button once more to apply settings reset !");
-        ESPUI.print(statusLabelID, "WORDCLOCK SETTINGS RESET REQUESTED");
-        back_color();
+        clear_display_background();
         redVal_time = 255;
         greenVal_time = 0;
         blueVal_time = 0;
@@ -1035,6 +906,16 @@ void call_langauge_select(Control* sender, int type) {
 
 
 // ###########################################################################################################################################
+// # Clear display background:
+// ###########################################################################################################################################
+void clear_display_background() {
+  for (uint16_t i = 0; i < 256; i++) {
+    strip.setPixelColor(i, 0, 0, 0);
+  }
+}
+
+
+// ###########################################################################################################################################
 // # Show the IP-address on the display:
 // ###########################################################################################################################################
 void ShowIPaddress() {
@@ -1053,7 +934,7 @@ void ShowIPaddress() {
     // }
 
     // Octet 1:
-    back_color();
+    clear_display_background();
     numbers(getDigit(int(WiFi.localIP()[0]), 2), 3);
     numbers(getDigit(int(WiFi.localIP()[0]), 1), 2);
     numbers(getDigit(int(WiFi.localIP()[0]), 0), 1);
@@ -1064,7 +945,7 @@ void ShowIPaddress() {
     delay(ipdelay);
 
     // // Octet 2:
-    back_color();
+    clear_display_background();
     numbers(getDigit(int(WiFi.localIP()[1]), 2), 3);
     numbers(getDigit(int(WiFi.localIP()[1]), 1), 2);
     numbers(getDigit(int(WiFi.localIP()[1]), 0), 1);
@@ -1075,7 +956,7 @@ void ShowIPaddress() {
     delay(ipdelay);
 
     // // Octet 3:
-    back_color();
+    clear_display_background();
     numbers(getDigit(int(WiFi.localIP()[2]), 2), 3);
     numbers(getDigit(int(WiFi.localIP()[2]), 1), 2);
     numbers(getDigit(int(WiFi.localIP()[2]), 0), 1);
@@ -1086,7 +967,7 @@ void ShowIPaddress() {
     delay(ipdelay);
 
     // // Octet 4:
-    back_color();
+    clear_display_background();
     numbers(getDigit(int(WiFi.localIP()[3]), 2), 3);
     numbers(getDigit(int(WiFi.localIP()[3]), 1), 2);
     numbers(getDigit(int(WiFi.localIP()[3]), 0), 1);
@@ -1549,85 +1430,11 @@ int getDigit(int number, int pos) {
 
 
 // ###########################################################################################################################################
-// # GUI: Restart the WordClock:
-// ###########################################################################################################################################
-int ResetCounter = 0;
-void buttonRestart(Control* sender, int type, void* param) {
-  updatedevice = false;
-  delay(250);
-  if (changedvalues == true) {
-    setFlashValues();  // Write settings to flash
-    delay(250);
-  }
-  preferences.end();
-  if (ResetCounter == 0) ResetTextLEDs(strip.Color(255, 0, 0));
-  if (ResetCounter == 1) ResetTextLEDs(strip.Color(0, 255, 0));
-  switch (type) {
-    case B_DOWN:
-      break;
-    case B_UP:
-      if (ResetCounter == 1) {
-        delay(250);
-        ESP.restart();
-      } else {
-        Serial.println("Status: Restart request");
-        ESPUI.print(statusLabelID, "RESTART REQUESTED");
-        ESPUI.updateButton(sender->id, "! Press button once more to apply restart !");
-        ResetCounter = ResetCounter + 1;
-      }
-      break;
-  }
-}
-
-
-// ###########################################################################################################################################
-// # GUI: Reset the WiFi settings of the WordClock:
-// ###########################################################################################################################################
-int WIFIResetCounter = 0;
-void buttonWiFiReset(Control* sender, int type, void* param) {
-  updatedevice = false;
-  if (WIFIResetCounter == 0) ResetTextLEDs(strip.Color(255, 0, 0));
-  if (WIFIResetCounter == 1) ResetTextLEDs(strip.Color(0, 255, 0));
-  if (WIFIResetCounter == 0) SetWLAN(strip.Color(255, 0, 0));
-  if (WIFIResetCounter == 1) SetWLAN(strip.Color(0, 255, 0));
-  switch (type) {
-    case B_DOWN:
-      break;
-    case B_UP:
-      if (WIFIResetCounter == 1) {
-        Serial.println("Status: WIFI SETTINGS RESET REQUEST EXECUTED");
-        WiFi.disconnect();
-        delay(1000);
-        WiFiManager manager;
-        manager.resetSettings();
-        delay(1000);
-        Serial.println("####################################################################################################");
-        Serial.println("# WIFI SETTING WERE SET TO DEFAULT... WORDCLOCK WILL NOW RESTART... PLEASE CONFIGURE WIFI AGAIN... #");
-        Serial.println("####################################################################################################");
-        delay(1000);
-        ESP.restart();
-      } else {
-        ESPUI.print(statusLabelID, "WIFI SETTINGS RESET REQUESTED");
-        ESPUI.updateButton(sender->id, "! Press button once more to apply WiFi reset !");
-        Serial.println("Status: WIFI SETTINGS RESET REQUEST");
-        preferences.putUInt("WiFiManFix", 0);  // WiFi Manager Fix Reset
-        preferences.putUInt("useshowip", 1);   // Show IP-address again
-        delay(250);
-        preferences.end();
-        WIFIResetCounter = WIFIResetCounter + 1;
-      }
-      break;
-  }
-}
-
-
-// ###########################################################################################################################################
 // # Show a LED output for RESET in the different languages:
 // ###########################################################################################################################################
 void ResetTextLEDs(uint32_t color) {
   updatedevice = false;
-  delay(1000);
-  back_color();
+  delay(500);
 
   if (langLEDlayout == 0) {      // DE:
     setLEDcol(165, 172, color);  // NEUSTART
@@ -1644,9 +1451,6 @@ void ResetTextLEDs(uint32_t color) {
   if (langLEDlayout == 3) {  // FR:
     setLED(101, 111, 1);     //  REDEMARRAGE
   }
-
-  strip.show();
-  delay(1000);
 }
 
 
@@ -1672,8 +1476,9 @@ void buttonUpdate(Control* sender, int type, void* param) {
   Serial.println("Status: Update request");
   updatedevice = false;
   preferences.end();
+  ESPUI.updateButton(sender->id, "Update mode active now - Use the update url: >>>");
   updatemode = true;
-  back_color();
+  clear_display_background();
   delay(500);
   redVal_time = 0;
   greenVal_time = 0;
@@ -1683,9 +1488,7 @@ void buttonUpdate(Control* sender, int type, void* param) {
   if (langLEDlayout == 2) setLED(16, 21, 1);  // NL
   if (langLEDlayout == 3) setLED(0, 13, 1);   // FR
   strip.show();
-  ESPUI.print(statusLabelID, "Update requested");
-  ESPUI.updateButton(sender->id, "Update mode active now - Use the update url: >>>");
-  Serial.println("Status: Update executed");
+  Serial.println("Status: Update mode started... Please update the WordClock now...");
 }
 
 
@@ -1751,7 +1554,9 @@ void switchTelegram(Control* sender, int value) {
   }
   changedvalues = true;
   setFlashValues();  // Save values!
+  clear_display_background();
   ResetTextLEDs(strip.Color(0, 255, 0));
+  strip.show();
   Serial.println("Status: Perform restart now");
   delay(1000);
   ESP.restart();
@@ -1835,12 +1640,12 @@ void update_display() {
     strip.setBrightness(33);
     for (int i = 0; i <= 12; i++) {  // 12 hours only to show all hour texts
       show_time(i, 0);
-      delay(500);
+      delay(1000);
     }
     for (int i = 0; i <= 23; i++) {  // Hours 0 to 23 with all hour and minute texts:
       for (int y = 0; y < 60; y++) {
         show_time(i, y);
-        delay(5);
+        delay(250);
       }
     }
   }
@@ -1857,7 +1662,7 @@ void show_time(int hours, int minutes) {
     return;
   }
   String currentTime = String(hours) + ":" + String(minutes) + ":" + String(iSecond);
-  // if (updatenow = true) Serial.println("Update LED display... " + currentTime);
+  if ((updatenow == true) && (debugmode == 1)) Serial.println("Update LED display... " + currentTime);
   updatenow = false;
   lastHourSet = hours;
   lastMinutesSet = minutes;
@@ -2343,9 +2148,6 @@ void show_time(int hours, int minutes) {
 
   // Handle extra words:
   set_extra_words();
-
-  // if (debugmode == 1) Serial.println("Update display");
-
   strip.show();
 }
 
@@ -2550,7 +2352,6 @@ void startup() {
     }
   }
 
-
   SetWLAN(strip.Color(0, 0, 255));  // Show WLAN text
 }
 
@@ -2562,103 +2363,6 @@ void back_color() {
   uint32_t c0 = strip.Color(redVal_back, greenVal_back, blueVal_back);
   for (int i = 0; i < NUMPIXELS; i++) {
     strip.setPixelColor(i, c0);
-  }
-  delay(500);
-}
-
-
-// ###########################################################################################################################################
-// # Startup WiFi text function:
-// ###########################################################################################################################################
-void SetWLAN(uint32_t color) {
-  Serial.println("Show text WLAN...");
-
-  if (langLEDlayout == 0) {  // DE:
-    for (uint16_t i = 48; i < 52; i++) {
-      strip.setPixelColor(i, color);
-    }
-  }
-
-  if (langLEDlayout == 1) {  // EN:
-    for (uint16_t i = 230; i < 234; i++) {
-      strip.setPixelColor(i, color);
-    }
-  }
-
-  if (langLEDlayout == 2) {  // NL:
-    for (uint16_t i = 113; i < 117; i++) {
-      strip.setPixelColor(i, color);
-    }
-  }
-
-  if (langLEDlayout == 3) {  // FR:
-    for (uint16_t i = 231; i < 235; i++) {
-      strip.setPixelColor(i, color);
-    }
-  }
-
-  strip.show();
-}
-
-
-// ###########################################################################################################################################
-// # Wifi Manager setup and reconnect function that runs once at startup and during the loop function of the ESP:
-// ###########################################################################################################################################
-void WIFI_login() {
-  Serial.print("Try to connect to WiFi: ");
-  Serial.println(WiFi.SSID());
-  WiFi.setHostname(hostname);
-  bool WiFires;
-  WiFiManager wifiManager;
-  wifiManager.setConfigPortalTimeout(AP_TIMEOUT);
-  WiFires = wifiManager.autoConnect(DEFAULT_AP_NAME);
-  if (!WiFires) {
-    Serial.print("Failed to connect to WiFi: ");
-    Serial.println(WiFi.SSID());
-  } else {
-    Serial.print("Connected to WiFi: ");
-    Serial.println(WiFi.SSID());
-    if (langLEDlayout == 0) {  // DE:
-      for (uint16_t i = 246; i < 248; i++) {
-        strip.setPixelColor(i, strip.Color(0, 255, 0));
-      }
-    }
-    if (langLEDlayout == 1) {  // EN:
-      for (uint16_t i = 227; i < 229; i++) {
-        strip.setPixelColor(i, strip.Color(0, 255, 0));
-      }
-    }
-    if (langLEDlayout == 2) {  // NL:
-      for (uint16_t i = 227; i < 229; i++) {
-        strip.setPixelColor(i, strip.Color(0, 255, 0));
-      }
-    }
-    if (langLEDlayout == 3) {  // FR:
-      for (uint16_t i = 227; i < 229; i++) {
-        strip.setPixelColor(i, strip.Color(0, 255, 0));
-      }
-    }
-
-    SetWLAN(strip.Color(0, 255, 0));
-    delay(1000);
-  }
-}
-
-
-// ###########################################################################################################################################
-// # WiFi Manager 1st connect fix: (Needed after the 1st login to your router - Restart the device once to be able to reach the web page...)
-// ###########################################################################################################################################
-void WiFiManager1stBootFix() {
-  WiFiManFix = preferences.getUInt("WiFiManFix", 0);
-  if (WiFiManFix == 0) {
-    Serial.println("######################################################################");
-    Serial.println("# ESP restart needed because of WiFi Manager Fix");
-    Serial.println("######################################################################");
-    preferences.putUInt("WiFiManFix", 1);
-    delay(1000);
-    preferences.end();
-    delay(1000);
-    ESP.restart();
   }
 }
 
@@ -2698,53 +2402,59 @@ void setTimezone(String timezone) {
   tzset();
 }
 // ###########################################################################################################################################
+int TimeResetCounter = 1;
 void initTime(String timezone) {
+  clear_display_background();
   struct tm timeinfo;
   Serial.println("Setting up time");
-  configTime(0, 0, NTPserver);
-  if (!getLocalTime(&timeinfo)) {
-    back_color();
-    Serial.println("Failed to obtain time");
-    ESPUI.print(statusLabelID, "Failed to obtain time");
+  configTime(0, 0, NTPserver.c_str());
+
+  while (!getLocalTime(&timeinfo)) {
+    clear_display_background();
+    strip.show();
+    delay(250);
+    Serial.println("! Failed to obtain time - Time server could not be reached ! --> Try: " + String(TimeResetCounter) + " of 5...");
+    TimeResetCounter = TimeResetCounter + 1;
+    if (TimeResetCounter == 6) {
+      Serial.println("! Failed to obtain time - Time server could not be reached ! --> RESTART THE DEVICE NOW...");
+      ESP.restart();
+    }
+
+    // Time server could not be reached --> show red TIME texts:
     if (langLEDlayout == 0) {  // DE:
       setLEDexCol(84, 87, 1, 255, 0, 0);
-      setLEDexCol(165, 172, 1, 255, 0, 0);
     }
     if (langLEDlayout == 1) {  // EN:
       setLEDexCol(28, 31, 1, 255, 0, 0);
-      setLEDexCol(120, 126, 1, 255, 0, 0);
     }
     if (langLEDlayout == 2) {  // NL:
       setLEDexCol(76, 79, 1, 255, 0, 0);
-      setLEDexCol(96, 103, 1, 255, 0, 0);
     }
     if (langLEDlayout == 3) {  // FR:
       setLEDexCol(235, 239, 1, 255, 0, 0);
-      setLEDexCol(101, 111, 1, 255, 0, 0);
     }
     strip.show();
-    delay(3000);
-    ESP.restart();
-    return;
-  } else {
-    back_color();
-    if (langLEDlayout == 0) {  // DE:
-      setLEDexCol(84, 87, 1, 0, 255, 0);
-    }
-    if (langLEDlayout == 1) {  // EN:
-      setLEDexCol(28, 31, 1, 0, 255, 0);
-    }
-    if (langLEDlayout == 2) {  // NL:
-      setLEDexCol(76, 79, 1, 0, 255, 0);
-    }
-    if (langLEDlayout == 3) {  // FR:
-      setLEDexCol(235, 239, 1, 0, 255, 0);
-    }
-    strip.show();
-    delay(1000);
-    Serial.println("Got the time from NTP");
-    setTimezone(timezone);
+    delay(250);
   }
+
+  // Time successfully received --> green TIME text:
+  if (langLEDlayout == 0) {  // DE:
+    setLEDexCol(84, 87, 1, 0, 255, 0);
+  }
+  if (langLEDlayout == 1) {  // EN:
+    setLEDexCol(28, 31, 1, 0, 255, 0);
+  }
+  if (langLEDlayout == 2) {  // NL:
+    setLEDexCol(76, 79, 1, 0, 255, 0);
+  }
+  if (langLEDlayout == 3) {  // FR:
+    setLEDexCol(235, 239, 1, 0, 255, 0);
+  }
+
+  strip.show();
+  delay(1000);
+  Serial.println("Got the time from NTP");
+  setTimezone(timezone);
 }
 // ###########################################################################################################################################
 void printLocalTime() {
@@ -2877,240 +2587,111 @@ void colCallBACK(Control* sender, int type) {
 
 
 // ###########################################################################################################################################
-// # GUI: Color change for Extra Word ew1:
+// # GUI: Color change for Extra Word ew1 to ew12:
 // ###########################################################################################################################################
-void colCallew1(Control* sender, int type) {
+void colCallew(Control* sender, int type) {
   updatedevice = false;
   delay(1000);
   sender->value.toUpperCase();
+  // Serial.print("Sender: ");
+  // Serial.println(sender->id);
+
   char c[7];
   sender->value.toCharArray(c, 8);
   int red = hexcolorToInt(c[1], c[2]);
   int green = hexcolorToInt(c[3], c[4]);
   int blue = hexcolorToInt(c[5], c[6]);
-  redVal_ew1 = red;
-  greenVal_ew1 = green;
-  blueVal_ew1 = blue;
-  changedvalues = true;
-  updatedevice = true;
-}
 
+  int ewnum = sender->id;
+  // Serial.print("ewnum: ");
+  // Serial.println(ewnum);
+  switch (ewnum) {
+    case 25:
+      {
+        redVal_ew1 = red;
+        greenVal_ew1 = green;
+        blueVal_ew1 = blue;
+        break;
+      }
+    case 26:
+      {
+        redVal_ew2 = red;
+        greenVal_ew2 = green;
+        blueVal_ew2 = blue;
+        break;
+      }
+    case 27:
+      {
+        redVal_ew3 = red;
+        greenVal_ew3 = green;
+        blueVal_ew3 = blue;
+        break;
+      }
+    case 28:
+      {
+        redVal_ew4 = red;
+        greenVal_ew4 = green;
+        blueVal_ew4 = blue;
+        break;
+      }
 
-// ###########################################################################################################################################
-// # GUI: Color change for Extra Word ew2:
-// ###########################################################################################################################################
-void colCallew2(Control* sender, int type) {
-  updatedevice = false;
-  delay(1000);
-  sender->value.toUpperCase();
-  char c[7];
-  sender->value.toCharArray(c, 8);
-  int red = hexcolorToInt(c[1], c[2]);
-  int green = hexcolorToInt(c[3], c[4]);
-  int blue = hexcolorToInt(c[5], c[6]);
-  redVal_ew2 = red;
-  greenVal_ew2 = green;
-  blueVal_ew2 = blue;
-  changedvalues = true;
-  updatedevice = true;
-}
-
-
-// ###########################################################################################################################################
-// # GUI: Color change for Extra Word ew3:
-// ###########################################################################################################################################
-void colCallew3(Control* sender, int type) {
-  updatedevice = false;
-  delay(1000);
-  sender->value.toUpperCase();
-  char c[7];
-  sender->value.toCharArray(c, 8);
-  int red = hexcolorToInt(c[1], c[2]);
-  int green = hexcolorToInt(c[3], c[4]);
-  int blue = hexcolorToInt(c[5], c[6]);
-  redVal_ew3 = red;
-  greenVal_ew3 = green;
-  blueVal_ew3 = blue;
-  changedvalues = true;
-  updatedevice = true;
-}
-
-
-// ###########################################################################################################################################
-// # GUI: Color change for Extra Word ew4:
-// ###########################################################################################################################################
-void colCallew4(Control* sender, int type) {
-  updatedevice = false;
-  delay(1000);
-  sender->value.toUpperCase();
-  char c[7];
-  sender->value.toCharArray(c, 8);
-  int red = hexcolorToInt(c[1], c[2]);
-  int green = hexcolorToInt(c[3], c[4]);
-  int blue = hexcolorToInt(c[5], c[6]);
-  redVal_ew4 = red;
-  greenVal_ew4 = green;
-  blueVal_ew4 = blue;
-  changedvalues = true;
-  updatedevice = true;
-}
-
-
-// ###########################################################################################################################################
-// # GUI: Color change for Extra Word ew5:
-// ###########################################################################################################################################
-void colCallew5(Control* sender, int type) {
-  updatedevice = false;
-  delay(1000);
-  sender->value.toUpperCase();
-  char c[7];
-  sender->value.toCharArray(c, 8);
-  int red = hexcolorToInt(c[1], c[2]);
-  int green = hexcolorToInt(c[3], c[4]);
-  int blue = hexcolorToInt(c[5], c[6]);
-  redVal_ew5 = red;
-  greenVal_ew5 = green;
-  blueVal_ew5 = blue;
-  changedvalues = true;
-  updatedevice = true;
-}
-
-
-// ###########################################################################################################################################
-// # GUI: Color change for Extra Word ew6:
-// ###########################################################################################################################################
-void colCallew6(Control* sender, int type) {
-  updatedevice = false;
-  delay(1000);
-  sender->value.toUpperCase();
-  char c[7];
-  sender->value.toCharArray(c, 8);
-  int red = hexcolorToInt(c[1], c[2]);
-  int green = hexcolorToInt(c[3], c[4]);
-  int blue = hexcolorToInt(c[5], c[6]);
-  redVal_ew6 = red;
-  greenVal_ew6 = green;
-  blueVal_ew6 = blue;
-  changedvalues = true;
-  updatedevice = true;
-}
-
-
-// ###########################################################################################################################################
-// # GUI: Color change for Extra Word ew7:
-// ###########################################################################################################################################
-void colCallew7(Control* sender, int type) {
-  updatedevice = false;
-  delay(1000);
-  sender->value.toUpperCase();
-  char c[7];
-  sender->value.toCharArray(c, 8);
-  int red = hexcolorToInt(c[1], c[2]);
-  int green = hexcolorToInt(c[3], c[4]);
-  int blue = hexcolorToInt(c[5], c[6]);
-  redVal_ew7 = red;
-  greenVal_ew7 = green;
-  blueVal_ew7 = blue;
-  changedvalues = true;
-  updatedevice = true;
-}
-
-
-// ###########################################################################################################################################
-// # GUI: Color change for Extra Word ew8:
-// ###########################################################################################################################################
-void colCallew8(Control* sender, int type) {
-  updatedevice = false;
-  delay(1000);
-  sender->value.toUpperCase();
-  char c[7];
-  sender->value.toCharArray(c, 8);
-  int red = hexcolorToInt(c[1], c[2]);
-  int green = hexcolorToInt(c[3], c[4]);
-  int blue = hexcolorToInt(c[5], c[6]);
-  redVal_ew8 = red;
-  greenVal_ew8 = green;
-  blueVal_ew8 = blue;
-  changedvalues = true;
-  updatedevice = true;
-}
-
-
-// ###########################################################################################################################################
-// # GUI: Color change for Extra Word ew9:
-// ###########################################################################################################################################
-void colCallew9(Control* sender, int type) {
-  updatedevice = false;
-  delay(1000);
-  sender->value.toUpperCase();
-  char c[7];
-  sender->value.toCharArray(c, 8);
-  int red = hexcolorToInt(c[1], c[2]);
-  int green = hexcolorToInt(c[3], c[4]);
-  int blue = hexcolorToInt(c[5], c[6]);
-  redVal_ew9 = red;
-  greenVal_ew9 = green;
-  blueVal_ew9 = blue;
-  changedvalues = true;
-  updatedevice = true;
-}
-
-
-// ###########################################################################################################################################
-// # GUI: Color change for Extra Word ew10:
-// ###########################################################################################################################################
-void colCallew10(Control* sender, int type) {
-  updatedevice = false;
-  delay(1000);
-  sender->value.toUpperCase();
-  char c[7];
-  sender->value.toCharArray(c, 8);
-  int red = hexcolorToInt(c[1], c[2]);
-  int green = hexcolorToInt(c[3], c[4]);
-  int blue = hexcolorToInt(c[5], c[6]);
-  redVal_ew10 = red;
-  greenVal_ew10 = green;
-  blueVal_ew10 = blue;
-  changedvalues = true;
-  updatedevice = true;
-}
-
-
-// ###########################################################################################################################################
-// # GUI: Color change for Extra Word ew11:
-// ###########################################################################################################################################
-void colCallew11(Control* sender, int type) {
-  updatedevice = false;
-  delay(1000);
-  sender->value.toUpperCase();
-  char c[7];
-  sender->value.toCharArray(c, 8);
-  int red = hexcolorToInt(c[1], c[2]);
-  int green = hexcolorToInt(c[3], c[4]);
-  int blue = hexcolorToInt(c[5], c[6]);
-  redVal_ew11 = red;
-  greenVal_ew11 = green;
-  blueVal_ew11 = blue;
-  changedvalues = true;
-  updatedevice = true;
-}
-
-
-// ###########################################################################################################################################
-// # GUI: Color change for Extra Word ew12:
-// ###########################################################################################################################################
-void colCallew12(Control* sender, int type) {
-  updatedevice = false;
-  delay(1000);
-  sender->value.toUpperCase();
-  char c[7];
-  sender->value.toCharArray(c, 8);
-  int red = hexcolorToInt(c[1], c[2]);
-  int green = hexcolorToInt(c[3], c[4]);
-  int blue = hexcolorToInt(c[5], c[6]);
-  redVal_ew12 = red;
-  greenVal_ew12 = green;
-  blueVal_ew12 = blue;
+    case 29:
+      {
+        redVal_ew5 = red;
+        greenVal_ew5 = green;
+        blueVal_ew5 = blue;
+        break;
+      }
+    case 30:
+      {
+        redVal_ew6 = red;
+        greenVal_ew6 = green;
+        blueVal_ew6 = blue;
+        break;
+      }
+    case 31:
+      {
+        redVal_ew7 = red;
+        greenVal_ew7 = green;
+        blueVal_ew7 = blue;
+        break;
+      }
+    case 32:
+      {
+        redVal_ew8 = red;
+        greenVal_ew8 = green;
+        blueVal_ew8 = blue;
+        break;
+      }
+    case 33:
+      {
+        redVal_ew9 = red;
+        greenVal_ew9 = green;
+        blueVal_ew9 = blue;
+        break;
+      }
+    case 34:
+      {
+        redVal_ew10 = red;
+        greenVal_ew10 = green;
+        blueVal_ew10 = blue;
+        break;
+      }
+    case 35:
+      {
+        redVal_ew11 = red;
+        greenVal_ew11 = green;
+        blueVal_ew11 = blue;
+        break;
+      }
+    case 36:
+      {
+        redVal_ew12 = red;
+        greenVal_ew12 = green;
+        blueVal_ew12 = blue;
+        break;
+      }
+  }
   changedvalues = true;
   updatedevice = true;
 }
@@ -3201,473 +2782,156 @@ void handleNewMessages(int numNewMessages) {
     String from_name = bot.messages[i].from_name;
     if (from_name == "") from_name = "Guest";
 
-    // ################################################################## DE:
-    if (langLEDlayout == 0) {  // DE:
-
-      if (text == "/ew1") {
-        if (ew1 == 0) {
-          ew1 = 1;
-          bot.sendMessage(chat_id, "ALARM text set active " + emoActive);
-        } else {
-          ew1 = 0;
-          bot.sendMessage(chat_id, "ALARM text set inactive " + emoInactive);
-        }
-        changedvalues = true;
+    //##################################################################
+    // Send respond messages:
+    //##################################################################
+    if (text == "/ew1") {
+      if (ew1 == 0) {
+        ew1 = 1;
+        bot.sendMessage(chat_id, ewtext1 + " text set active " + emoActive);
+      } else {
+        ew1 = 0;
+        bot.sendMessage(chat_id, ewtext1 + " text set inactive " + emoInactive);
       }
+      changedvalues = true;
+    }
 
-      if (text == "/ew2") {
-        if (ew2 == 0) {
-          ew2 = 1;
-          bot.sendMessage(chat_id, "GEBURTSTAG text set active " + emoActive);
-        } else {
-          ew2 = 0;
-          bot.sendMessage(chat_id, "GEBURTSTAG text set inactive " + emoInactive);
-        }
-        changedvalues = true;
+    if (text == "/ew2") {
+      if (ew2 == 0) {
+        ew2 = 1;
+        bot.sendMessage(chat_id, ewtext2 + "text set active " + emoActive);
+      } else {
+        ew2 = 0;
+        bot.sendMessage(chat_id, ewtext2 + "text set inactive " + emoInactive);
       }
+      changedvalues = true;
+    }
 
-      if (text == "/ew3") {
-        if (ew3 == 0) {
-          ew3 = 1;
-          bot.sendMessage(chat_id, "MÜLL RAUS BRINGEN text set active " + emoActive);
-        } else {
-          ew3 = 0;
-          bot.sendMessage(chat_id, "MÜLL RAUS BRINGEN text set inactive " + emoInactive);
-        }
-        changedvalues = true;
+    if (text == "/ew3") {
+      if (ew3 == 0) {
+        ew3 = 1;
+        bot.sendMessage(chat_id, ewtext3 + " text set active " + emoActive);
+      } else {
+        ew3 = 0;
+        bot.sendMessage(chat_id, ewtext3 + " text set inactive " + emoInactive);
       }
+      changedvalues = true;
+    }
 
-      if (text == "/ew4") {
-        if (ew4 == 0) {
-          ew4 = 1;
-          bot.sendMessage(chat_id, "AUTO text set active " + emoActive);
-        } else {
-          ew4 = 0;
-          bot.sendMessage(chat_id, "AUTO text set inactive " + emoInactive);
-        }
-        changedvalues = true;
+    if (text == "/ew4") {
+      if (ew4 == 0) {
+        ew4 = 1;
+        bot.sendMessage(chat_id, ewtext4 + " text set active " + emoActive);
+      } else {
+        ew4 = 0;
+        bot.sendMessage(chat_id, ewtext4 + " text set inactive " + emoInactive);
       }
+      changedvalues = true;
+    }
 
-      if (text == "/ew5") {
-        if (ew5 == 0) {
-          ew5 = 1;
-          bot.sendMessage(chat_id, "FEIERTAG text set active " + emoActive);
-        } else {
-          ew5 = 0;
-          bot.sendMessage(chat_id, "FEIERTAG text set inactive " + emoInactive);
-        }
-        changedvalues = true;
+    if (text == "/ew5") {
+      if (ew5 == 0) {
+        ew5 = 1;
+        bot.sendMessage(chat_id, ewtext5 + " text set active " + emoActive);
+      } else {
+        ew5 = 0;
+        bot.sendMessage(chat_id, ewtext5 + " text set inactive " + emoInactive);
       }
+      changedvalues = true;
+    }
 
-      if (text == "/ew6") {
-        if (ew6 == 0) {
-          ew6 = 1;
-          bot.sendMessage(chat_id, "FORMEL1 text set active " + emoActive);
-        } else {
-          ew6 = 0;
-          bot.sendMessage(chat_id, "FORMEL1 text set inactive " + emoInactive);
-        }
-        changedvalues = true;
+    if (text == "/ew6") {
+      if (ew6 == 0) {
+        ew6 = 1;
+        bot.sendMessage(chat_id, ewtext6 + " text set active " + emoActive);
+      } else {
+        ew6 = 0;
+        bot.sendMessage(chat_id, ewtext6 + " text set inactive " + emoInactive);
       }
+      changedvalues = true;
+    }
 
-      if (text == "/ew7") {
-        if (ew7 == 0) {
-          ew7 = 1;
-          bot.sendMessage(chat_id, "GELBER SACK text set active " + emoActive);
-        } else {
-          ew7 = 0;
-          bot.sendMessage(chat_id, "GELBER SACK text set inactive " + emoInactive);
-        }
-        changedvalues = true;
+    if (text == "/ew7") {
+      if (ew7 == 0) {
+        ew7 = 1;
+        bot.sendMessage(chat_id, ewtext7 + " text set active " + emoActive);
+      } else {
+        ew7 = 0;
+        bot.sendMessage(chat_id, ewtext7 + " text set inactive " + emoInactive);
       }
+      changedvalues = true;
+    }
 
-      if (text == "/ew8") {
-        if (ew8 == 0) {
-          ew8 = 1;
-          bot.sendMessage(chat_id, "URLAUB text set active " + emoActive);
-        } else {
-          ew8 = 0;
-          bot.sendMessage(chat_id, "URLAUB text set inactive " + emoInactive);
-        }
-        changedvalues = true;
+    if (text == "/ew8") {
+      if (ew8 == 0) {
+        ew8 = 1;
+        bot.sendMessage(chat_id, ewtext8 + " text set active " + emoActive);
+      } else {
+        ew8 = 0;
+        bot.sendMessage(chat_id, ewtext8 + " text set inactive " + emoInactive);
       }
+      changedvalues = true;
+    }
 
-      if (text == "/ew9") {
-        if (ew9 == 0) {
-          ew9 = 1;
-          bot.sendMessage(chat_id, "WERKSTATT text set active " + emoActive);
-        } else {
-          ew9 = 0;
-          bot.sendMessage(chat_id, "WERKSTATT text set inactive " + emoInactive);
-        }
-        changedvalues = true;
+    if (text == "/ew9") {
+      if (ew9 == 0) {
+        ew9 = 1;
+        bot.sendMessage(chat_id, ewtext9 + " text set active " + emoActive);
+      } else {
+        ew9 = 0;
+        bot.sendMessage(chat_id, ewtext9 + " text set inactive " + emoInactive);
       }
+      changedvalues = true;
+    }
 
-      if (text == "/ew10") {
-        if (ew10 == 0) {
-          ew10 = 1;
-          bot.sendMessage(chat_id, "ZEIT ZUM ZOCKEN text set active " + emoActive);
-        } else {
-          ew10 = 0;
-          bot.sendMessage(chat_id, "ZEIT ZUM ZOCKEN text set inactive " + emoInactive);
-        }
-        changedvalues = true;
+    if (text == "/ew10") {
+      if (ew10 == 0) {
+        ew10 = 1;
+        bot.sendMessage(chat_id, ewtext10 + " text set active " + emoActive);
+      } else {
+        ew10 = 0;
+        bot.sendMessage(chat_id, ewtext10 + " text set inactive " + emoInactive);
       }
+      changedvalues = true;
+    }
 
-      if (text == "/ew11") {
-        if (ew11 == 0) {
-          ew11 = 1;
-          bot.sendMessage(chat_id, "FRISEUR text set active " + emoActive);
-        } else {
-          ew11 = 0;
-          bot.sendMessage(chat_id, "FRISEUR text set inactive " + emoInactive);
-        }
-        changedvalues = true;
+    if (text == "/ew11") {
+      if (ew11 == 0) {
+        ew11 = 1;
+        bot.sendMessage(chat_id, ewtext11 + " text set active " + emoActive);
+      } else {
+        ew11 = 0;
+        bot.sendMessage(chat_id, ewtext11 + " text set inactive " + emoInactive);
       }
+      changedvalues = true;
+    }
 
-      if (text == "/ew12") {
-        if (ew12 == 0) {
-          ew12 = 1;
-          bot.sendMessage(chat_id, "TERMIN text set active " + emoActive);
-        } else {
-          ew12 = 0;
-          bot.sendMessage(chat_id, "TERMIN text set inactive " + emoInactive);
-        }
-        changedvalues = true;
+    if (text == "/ew12") {
+      if (ew12 == 0) {
+        ew12 = 1;
+        bot.sendMessage(chat_id, ewtext12 + " text set active " + emoActive);
+      } else {
+        ew12 = 0;
+        bot.sendMessage(chat_id, ewtext12 + " text set inactive " + emoInactive);
       }
+      changedvalues = true;
+    }
 
+    if (langLEDlayout == 0) {  // DE has 12 extra words:
       if (text == "/start") {
         String welcome = "Welcome to WordClock Telegram bot, " + from_name + ". " + "\xF0\x9F\x98\x8A" + "\n";
         welcome += "Use /ew1, /ew2, /ew3, /ew4, /ew5, /ew6, /ew7, /ew8, /ew9, /ew10, /ew11, /ew12 or the menu to set the extra words.\n\n";
         bot.sendMessage(chat_id, welcome);
       }
-    }
-
-    // ################################################################## EN:
-    if (langLEDlayout == 1) {  // EN:
-      if (text == "/ew1") {
-        if (ew1 == 0) {
-          ew1 = 1;
-          bot.sendMessage(chat_id, "COME HERE text set active " + emoActive);
-        } else {
-          ew1 = 0;
-          bot.sendMessage(chat_id, "COME HERE text set inactive " + emoInactive);
-        }
-        changedvalues = true;
-      }
-
-      if (text == "/ew2") {
-        if (ew2 == 0) {
-          ew2 = 1;
-          bot.sendMessage(chat_id, "LUNCH TIME text set active " + emoActive);
-        } else {
-          ew2 = 0;
-          bot.sendMessage(chat_id, "LUNCH TIME text set inactive " + emoInactive);
-        }
-        changedvalues = true;
-      }
-
-      if (text == "/ew3") {
-        if (ew3 == 0) {
-          ew3 = 1;
-          bot.sendMessage(chat_id, "ALARM text set active " + emoActive);
-        } else {
-          ew3 = 0;
-          bot.sendMessage(chat_id, "ALARM text set inactive " + emoInactive);
-        }
-        changedvalues = true;
-      }
-
-      if (text == "/ew4") {
-        if (ew4 == 0) {
-          ew4 = 1;
-          bot.sendMessage(chat_id, "GARBAGE text set active " + emoActive);
-        } else {
-          ew4 = 0;
-          bot.sendMessage(chat_id, "GARBAGE text set inactive " + emoInactive);
-        }
-        changedvalues = true;
-      }
-
-      if (text == "/ew5") {
-        if (ew5 == 0) {
-          ew5 = 1;
-          bot.sendMessage(chat_id, "HOLIDAY text set active " + emoActive);
-        } else {
-          ew5 = 0;
-          bot.sendMessage(chat_id, "HOLIDAY text set inactive " + emoInactive);
-        }
-        changedvalues = true;
-      }
-
-      if (text == "/ew6") {
-        if (ew6 == 0) {
-          ew6 = 1;
-          bot.sendMessage(chat_id, "TEMPERATURE text set active " + emoActive);
-        } else {
-          ew6 = 0;
-          bot.sendMessage(chat_id, "TEMPERATURE text set inactive " + emoInactive);
-        }
-        changedvalues = true;
-      }
-
-      if (text == "/ew7") {
-        if (ew7 == 0) {
-          ew7 = 1;
-          bot.sendMessage(chat_id, "DATE text set active " + emoActive);
-        } else {
-          ew7 = 0;
-          bot.sendMessage(chat_id, "DATE text set inactive " + emoInactive);
-        }
-        changedvalues = true;
-      }
-
-      if (text == "/ew8") {
-        if (ew8 == 0) {
-          ew8 = 1;
-          bot.sendMessage(chat_id, "BIRTHDAY text set active " + emoActive);
-        } else {
-          ew8 = 0;
-          bot.sendMessage(chat_id, "BIRTHDAY text set inactive " + emoInactive);
-        }
-        changedvalues = true;
-      }
-
-      if (text == "/ew9") {
-        if (ew9 == 0) {
-          ew9 = 1;
-          bot.sendMessage(chat_id, "DOORBELL text set active " + emoActive);
-        } else {
-          ew9 = 0;
-          bot.sendMessage(chat_id, "DOORBELL text set inactive " + emoInactive);
-        }
-        changedvalues = true;
-      }
-
-      if (text == "/start") {
+    } else {
+      if (text == "/start") {  // All others have 9 extra words:
         String welcome = "Welcome to WordClock Telegram bot, " + from_name + ". " + "\xF0\x9F\x98\x8A" + "\n";
         welcome += "Use /ew1, /ew2, /ew3, /ew4, /ew5, /ew6, /ew7, /ew8, /ew9 or the menu to set the extra words.\n\n";
         bot.sendMessage(chat_id, welcome);
       }
     }
-
-    // ################################################################## NL:
-    if (langLEDlayout == 2) {  // NL:
-      if (text == "/ew1") {
-        if (ew1 == 0) {
-          ew1 = 1;
-          bot.sendMessage(chat_id, "KOM HIER text set active " + emoActive);
-        } else {
-          ew1 = 0;
-          bot.sendMessage(chat_id, "KOM HIER text set inactive " + emoInactive);
-        }
-        changedvalues = true;
-      }
-
-      if (text == "/ew2") {
-        if (ew2 == 0) {
-          ew2 = 1;
-          bot.sendMessage(chat_id, "LUNCH TIJD text set active " + emoActive);
-        } else {
-          ew2 = 0;
-          bot.sendMessage(chat_id, "LUNCH TIJD text set inactive " + emoInactive);
-        }
-        changedvalues = true;
-      }
-
-      if (text == "/ew3") {
-        if (ew3 == 0) {
-          ew3 = 1;
-          bot.sendMessage(chat_id, "ALARM text set active " + emoActive);
-        } else {
-          ew3 = 0;
-          bot.sendMessage(chat_id, "ALARM text set inactive " + emoInactive);
-        }
-        changedvalues = true;
-      }
-
-      if (text == "/ew4") {
-        if (ew4 == 0) {
-          ew4 = 1;
-          bot.sendMessage(chat_id, "AFVAL text set active " + emoActive);
-        } else {
-          ew4 = 0;
-          bot.sendMessage(chat_id, "AFVAL text set inactive " + emoInactive);
-        }
-        changedvalues = true;
-      }
-
-      if (text == "/ew5") {
-        if (ew5 == 0) {
-          ew5 = 1;
-          bot.sendMessage(chat_id, "VAKANTIE text set active " + emoActive);
-        } else {
-          ew5 = 0;
-          bot.sendMessage(chat_id, "VAKANTIE text set inactive " + emoInactive);
-        }
-        changedvalues = true;
-      }
-
-      if (text == "/ew6") {
-        if (ew6 == 0) {
-          ew6 = 1;
-          bot.sendMessage(chat_id, "TEMPERATUUR text set active " + emoActive);
-        } else {
-          ew6 = 0;
-          bot.sendMessage(chat_id, "TEMPERATUUR text set inactive " + emoInactive);
-        }
-        changedvalues = true;
-      }
-
-      if (text == "/ew7") {
-        if (ew7 == 0) {
-          ew7 = 1;
-          bot.sendMessage(chat_id, "DATUM text set active " + emoActive);
-        } else {
-          ew7 = 0;
-          bot.sendMessage(chat_id, "DATUM text set inactive " + emoInactive);
-        }
-        changedvalues = true;
-      }
-
-      if (text == "/ew8") {
-        if (ew8 == 0) {
-          ew8 = 1;
-          bot.sendMessage(chat_id, "VERJAARDAG text set active " + emoActive);
-        } else {
-          ew8 = 0;
-          bot.sendMessage(chat_id, "VERJAARDAG text set inactive " + emoInactive);
-        }
-        changedvalues = true;
-      }
-
-      if (text == "/ew9") {
-        if (ew9 == 0) {
-          ew9 = 1;
-          bot.sendMessage(chat_id, "DEURBEL text set active " + emoActive);
-        } else {
-          ew9 = 0;
-          bot.sendMessage(chat_id, "DEURBEL text set inactive " + emoInactive);
-        }
-        changedvalues = true;
-      }
-
-      if (text == "/start") {
-        String welcome = "Welcome to WordClock Telegram bot, " + from_name + ". " + "\xF0\x9F\x98\x8A" + "\n";
-        welcome += "Use /ew1, /ew2, /ew3, /ew4, /ew5, /ew6, /ew7, /ew8, /ew9 or the menu to set the extra words.\n\n";
-        bot.sendMessage(chat_id, welcome);
-      }
-    }
-
-    // ################################################################## FR:
-    if (langLEDlayout == 3) {  // FR:
-      if (text == "/ew1") {
-        if (ew1 == 0) {
-          ew1 = 1;
-          bot.sendMessage(chat_id, "ALARME text set active " + emoActive);
-        } else {
-          ew1 = 0;
-          bot.sendMessage(chat_id, "ALARME text set inactive " + emoInactive);
-        }
-        changedvalues = true;
-      }
-
-      if (text == "/ew2") {
-        if (ew2 == 0) {
-          ew2 = 1;
-          bot.sendMessage(chat_id, "ANNIVERSAIRE text set active " + emoActive);
-        } else {
-          ew2 = 0;
-          bot.sendMessage(chat_id, "ANNIVERSAIRE text set inactive " + emoInactive);
-        }
-        changedvalues = true;
-      }
-
-      if (text == "/ew3") {
-        if (ew3 == 0) {
-          ew3 = 1;
-          bot.sendMessage(chat_id, "POUBELLE text set active " + emoActive);
-        } else {
-          ew3 = 0;
-          bot.sendMessage(chat_id, "POUBELLE text set inactive " + emoInactive);
-        }
-        changedvalues = true;
-      }
-
-      if (text == "/ew4") {
-        if (ew4 == 0) {
-          ew4 = 1;
-          bot.sendMessage(chat_id, "A TABLE text set active " + emoActive);
-        } else {
-          ew4 = 0;
-          bot.sendMessage(chat_id, "A TABLE text set inactive " + emoInactive);
-        }
-        changedvalues = true;
-      }
-
-      if (text == "/ew5") {
-        if (ew5 == 0) {
-          ew5 = 1;
-          bot.sendMessage(chat_id, "VACANCES text set active " + emoActive);
-        } else {
-          ew5 = 0;
-          bot.sendMessage(chat_id, "VACANCES text set inactive " + emoInactive);
-        }
-        changedvalues = true;
-      }
-
-      if (text == "/ew6") {
-        if (ew6 == 0) {
-          ew6 = 1;
-          bot.sendMessage(chat_id, "VIENS ICI text set active " + emoActive);
-        } else {
-          ew6 = 0;
-          bot.sendMessage(chat_id, "VIENS ICI text set inactive " + emoInactive);
-        }
-        changedvalues = true;
-      }
-
-      if (text == "/ew7") {
-        if (ew7 == 0) {
-          ew7 = 1;
-          bot.sendMessage(chat_id, "SONNETTE text set active " + emoActive);
-        } else {
-          ew7 = 0;
-          bot.sendMessage(chat_id, "SONNETTE text set inactive " + emoInactive);
-        }
-        changedvalues = true;
-      }
-
-      if (text == "/ew8") {
-        if (ew8 == 0) {
-          ew8 = 1;
-          bot.sendMessage(chat_id, "TEMPERATURE text set active " + emoActive);
-        } else {
-          ew8 = 0;
-          bot.sendMessage(chat_id, "TEMPERATURE text set inactive " + emoInactive);
-        }
-        changedvalues = true;
-      }
-
-      if (text == "/ew9") {
-        if (ew9 == 0) {
-          ew9 = 1;
-          bot.sendMessage(chat_id, "DATE text set active " + emoActive);
-        } else {
-          ew9 = 0;
-          bot.sendMessage(chat_id, "DATE text set inactive " + emoInactive);
-        }
-        changedvalues = true;
-      }
-
-      if (text == "/start") {
-        String welcome = "Welcome to WordClock Telegram bot, " + from_name + ". " + "\xF0\x9F\x98\x8A" + "\n";
-        welcome += "Use /ew1, /ew2, /ew3, /ew4, /ew5, /ew6, /ew7, /ew8, /ew9 or the menu to set the extra words.\n\n";
-        bot.sendMessage(chat_id, welcome);
-      }
-    }
+    //##################################################################
   }
-
   updatedevice = true;
 }
 
@@ -3827,18 +3091,6 @@ void set_extra_words() {
 
   // ########################################################### NL:
   if (langLEDlayout == 2) {  // NL:
-
-    // ew1 - KOM HIER text
-    // ew2 - LUNCH TIJD text
-    // ew3 - ALARM text
-    // ew4 - AFVAL text
-    // ew5 - VAKANTIE text
-    // ew6 - TEMPERATUUR text
-    // ew7 - DATUM text
-    // ew8 - VERJAARDAG text
-    // ew9 - DEURBEL text
-
-
     if (ew1 == 1) {
       setLEDexCol(48, 50, 1, redVal_ew1, greenVal_ew1, blueVal_ew1);  // ew1 - KOM HIER text
       setLEDexCol(68, 71, 1, redVal_ew1, greenVal_ew1, blueVal_ew1);  // ew1 - KOM HIER text
@@ -3901,17 +3153,6 @@ void set_extra_words() {
 
   // ########################################################### FR:
   if (langLEDlayout == 3) {  // FR:
-
-    // ew1 - ALARME text
-    // ew2 - ANNIVERSAIRE text
-    // ew3 - POUBELLE text
-    // ew4 - A TABLE text
-    // ew5 - VACANCES text
-    // ew6 - VIENS ICI text
-    // ew7 - SONNETTE text
-    // ew8 - TEMPERATURE text
-    // ew9 - DATE text
-
     if (ew1 == 1) {
       setLEDexCol(122, 127, 1, redVal_ew1, greenVal_ew1, blueVal_ew1);  // ew1
     } else {
@@ -3998,144 +3239,161 @@ void setLEDexCol(int ledNrFrom, int ledNrTo, int switchOn, int exRed, int exGree
 // ###########################################################################################################################################
 // # ESP32 OTA update:
 // ###########################################################################################################################################
-const char* loginIndex =
-  "<form name='loginForm'>"
-  "<table width='20%' bgcolor='A09F9F' align='center'>"
-  "<tr>"
-  "<td colspan=2>"
-  "<center><font size=4><b>WordClock Update Login Page</b></font></center>"
-  "<br>"
-  "</td>"
-  "<br>"
-  "<br>"
-  "</tr>"
-  "<tr>"
-  "<td>Username:</td>"
-  "<td><input type='text' size=25 name='userid'><br></td>"
-  "</tr>"
-  "<br>"
-  "<br>"
-  "<tr>"
-  "<td>Password:</td>"
-  "<td><input type='Password' size=25 name='pwd'><br></td>"
-  "<br>"
-  "<br>"
-  "</tr>"
-  "<tr>"
-  "<td><input type='submit' onclick='check(this.form)' value='Login'></td>"
-  "</tr>"
-  "</table>"
-  "</form>"
-  "<script>"
-  "function check(form)"
-  "{"
-  "if(form.userid.value=='WordClock' && form.pwd.value=='16x16')"
-  "{"
-  "window.open('/serverIndex')"
-  "}"
-  "else"
-  "{"
-  " alert('Error Password or Username')/*displays error message*/"
-  "}"
-  "}"
-  "</script>";
+const char otaserverIndex[] PROGMEM = R"=====(
+  <!DOCTYPE html><html><head><title>WordClock</title></head>
+      <style>
+      body {
+      padding: 25px;
+      font-size: 25px;
+      background-color: black;
+      color: white;
+      }
+      </style>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <body>
+    <form method='POST' action='/update' enctype='multipart/form-data'>
+      <center><b><h1>WordClock software update</h1></b>
+      <h2>Please select the in the Arduino IDE > "Sketch" ><br/>"Export Compiled Binary (Alt+Ctrl+S)"<br/>to generate the required "Code.ino.bin" file.<br/>
+      Use the "Update" button 1x to start the update.<br/><br/>WordClock will restart automatically.</h2><br/>
+      <input type='file' name='update'>       <input type='submit' value='Update'>
+     </center></form></body>
+  </html>
+ )=====";
 
-const char* serverIndex =
-  "<script src='https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js'></script>"
-  "<form method='POST' action='#' enctype='multipart/form-data' id='upload_form'>"
-  "<input type='file' name='update'>"
-  "<input type='submit' value='Update'>"
-  "</form>"
-  "<div id='prg'>progress: 0%</div>"
-  "<script>"
-  "$('form').submit(function(e){"
-  "e.preventDefault();"
-  "var form = $('#upload_form')[0];"
-  "var data = new FormData(form);"
-  " $.ajax({"
-  "url: '/update',"
-  "type: 'POST',"
-  "data: data,"
-  "contentType: false,"
-  "processData:false,"
-  "xhr: function() {"
-  "var xhr = new window.XMLHttpRequest();"
-  "xhr.upload.addEventListener('progress', function(evt) {"
-  "if (evt.lengthComputable) {"
-  "var per = evt.loaded / evt.total;"
-  "$('#prg').html('progress: ' + Math.round(per*100) + '%');"
-  "}"
-  "}, false);"
-  "return xhr;"
-  "},"
-  "success:function(d, s) {"
-  "console.log('success!')"
-  "},"
-  "error: function (a, b, c) {"
-  "}"
-  "});"
-  "});"
-  "</script>";
 
-void handleOTAupdate() {
-  // OTA update server pages urls:
-  updserver.on("/", HTTP_GET, []() {
-    updserver.sendHeader("Connection", "close");
-    updserver.send(200, "text/html", "WordClock web server on port 2022 is up. Please use the shown url and account credentials to update...");
+const char otaNOK[] PROGMEM = R"=====(
+  <!DOCTYPE html><html><head><title>WordClock</title></head>
+          <style>
+      body {
+      padding: 25px;
+      font-size: 25px;
+      background-color: black;
+      color: white;
+      }
+      </style>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <style>
+    .button {
+      display: inline-block;
+      padding: 15px 25px;
+      font-size: 24px;
+      cursor: pointer;
+      text-align: center;
+      text-decoration: none;
+      outline: none;
+      color: #fff;
+      background-color: #4CAF50;
+      border: none;
+      border-radius: 15px;
+      box-shadow: 0 9px #999;
+    }
+    .button:hover {background-color: #3e8e41}
+    .button:active {
+      background-color: #3e8e41;
+      box-shadow: 0 5px #666;
+      transform: translateY(4px);
+    }
+    </style>
+    <body>
+      <center><b><h1>WordClock software update</h1></b>
+      <h2>ERROR: Software update FAILED !!!<br/><br/>WordClock will restart automatically.</h2><br/>
+      </center></body>
+  </html>
+ )=====";
+
+
+const char otaOK[] PROGMEM = R"=====(
+  <!DOCTYPE html><html><head><title>WordClock</title></head>
+          <style>
+      body {
+      padding: 25px;
+      font-size: 25px;
+      background-color: black;
+      color: white;
+      }
+      </style>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <style>
+    .button {
+      display: inline-block;
+      padding: 15px 25px;
+      font-size: 24px;
+      cursor: pointer;
+      text-align: center;
+      text-decoration: none;
+      outline: none;
+      color: #fff;
+      background-color: #4CAF50;
+      border: none;
+      border-radius: 15px;
+      box-shadow: 0 9px #999;
+    }
+    .button:hover {background-color: #3e8e41}
+    .button:active {
+      background-color: #3e8e41;
+      box-shadow: 0 5px #666;
+      transform: translateY(4px);
+    }
+    </style>
+    <body>
+      <center><b><h1>WordClock software update</h1></b>
+      <h2>Software update done =)<br/><br/>WordClock will restart automatically.</h2><br/>
+      </center></body>
+  </html>
+ )=====";
+
+
+void setupOTAupate() {
+  otaserver.on("/", HTTP_GET, []() {
+    otaserver.sendHeader("Connection", "close");
+    otaserver.send(200, "text/html", otaserverIndex);
   });
 
-  updserver.on("/ota", HTTP_GET, []() {
-    updserver.sendHeader("Connection", "close");
-    updserver.send(200, "text/html", loginIndex);
-  });
-
-  updserver.on("/serverIndex", HTTP_GET, []() {
-    updserver.sendHeader("Connection", "close");
-    updserver.send(200, "text/html", serverIndex);
-  });
-
-  // handling uploading firmware file:
-  updserver.on(
+  otaserver.on(
     "/update", HTTP_POST, []() {
-      updserver.sendHeader("Connection", "close");
-      updserver.send(200, "text/plain", (Update.hasError()) ? "FAIL" : "OK");
+      otaserver.sendHeader("Connection", "close");
+      if (Update.hasError()) {
+        otaserver.send(200, "text/html", otaNOK);
+        ResetTextLEDs(strip.Color(255, 0, 0));
+      } else {
+        otaserver.send(200, "text/html", otaOK);
+        ResetTextLEDs(strip.Color(0, 255, 0));
+      }
+      delay(3000);
       ESP.restart();
     },
     []() {
-      HTTPUpload& upload = updserver.upload();
+      HTTPUpload& upload = otaserver.upload();
       if (upload.status == UPLOAD_FILE_START) {
+        Serial.setDebugOutput(true);
         Serial.printf("Update: %s\n", upload.filename.c_str());
-        if (!Update.begin(UPDATE_SIZE_UNKNOWN)) {  //start with max available size
+        if (!Update.begin()) {
           Update.printError(Serial);
         }
       } else if (upload.status == UPLOAD_FILE_WRITE) {
-        // flashing firmware to ESP
         if (Update.write(upload.buf, upload.currentSize) != upload.currentSize) {
           Update.printError(Serial);
         }
       } else if (upload.status == UPLOAD_FILE_END) {
-        if (Update.end(true)) {  //true to set the size to the current progress
-          Serial.printf("Update Success: %u\nRebooting...\n", upload.totalSize);
-          Serial.println("Status: Restart request");
-          ResetTextLEDs(strip.Color(255, 0, 0));
-          delay(1000);
-          ResetTextLEDs(strip.Color(0, 255, 0));
-          delay(1000);
+        if (Update.end(true)) {
+          Serial.printf("Update success: %u\nRebooting...\n", upload.totalSize);
         } else {
           Update.printError(Serial);
         }
+        Serial.setDebugOutput(false);
+      } else {
+        Serial.printf("Update failed unexpectedly (likely broken connection): status=%d\n", upload.status);
       }
     });
-  updserver.begin();
+  otaserver.begin();
 }
 
 
 // ###########################################################################################################################################
 // # LED web update server:
 // ###########################################################################################################################################
-int ew = 0;               // Current extra word
-void handleLEDupdate() {  // LED server pages urls:
-
+int ew = 0;                                                         // Current extra word
+void handleLEDupdate() {                                            // LED server pages urls:
   ledserver.on("/", HTTP_GET, [](AsyncWebServerRequest* request) {  // Show a manual how to use these links:
     String message = "WordClock web configurations and querry options examples:\n\n";
     message = message + "General:\n";
@@ -4416,6 +3674,561 @@ void handleLEDupdate() {  // LED server pages urls:
   });
 
   ledserver.begin();
+}
+
+
+// ###########################################################################################################################################
+// # Startup WiFi text function:
+// ###########################################################################################################################################
+void SetWLAN(uint32_t color) {
+  clear_display_background();  // Clear display background
+
+  if (langLEDlayout == 0) {  // DE:
+    for (uint16_t i = 48; i < 52; i++) {
+      strip.setPixelColor(i, color);
+    }
+  }
+
+  if (langLEDlayout == 1) {  // EN:
+    for (uint16_t i = 230; i < 234; i++) {
+      strip.setPixelColor(i, color);
+    }
+  }
+
+  if (langLEDlayout == 2) {  // NL:
+    for (uint16_t i = 113; i < 117; i++) {
+      strip.setPixelColor(i, color);
+    }
+  }
+
+  if (langLEDlayout == 3) {  // FR:
+    for (uint16_t i = 231; i < 235; i++) {
+      strip.setPixelColor(i, color);
+    }
+  }
+
+  strip.show();
+}
+
+
+// ###########################################################################################################################################
+// # Text output function:
+// ###########################################################################################################################################
+void showtext(String letter, int wait, uint32_t c) {
+  clear_display_background();
+
+  int myArray[50];
+  memset(myArray, 0, sizeof(myArray));
+
+  if (letter == "W") {
+    int myArray2[] = { 42, 53, 74, 85, 106, 117, 138, 149, 170, 181, 182, 183, 168, 151, 136, 184, 185, 186, 165, 154, 133, 122, 101, 90, 69, 58, 37 };
+    memcpy(myArray, myArray2, sizeof(myArray2));
+  }
+
+  if (letter == "S") {
+    int myArray2[] = { 37, 38, 39, 40, 41, 42, 53, 74, 85, 101, 102, 103, 104, 105, 106, 122, 133, 154, 165, 181, 182, 183, 184, 185, 186 };
+    memcpy(myArray, myArray2, sizeof(myArray2));
+  }
+
+  if (letter == "E") {
+    int myArray2[] = { 37, 38, 39, 40, 41, 42, 53, 74, 85, 101, 102, 103, 104, 105, 106, 117, 138, 149, 170, 181, 182, 183, 184, 185, 186 };
+    memcpy(myArray, myArray2, sizeof(myArray2));
+  }
+
+  if (letter == "T") {
+    int myArray2[] = { 37, 38, 39, 40, 41, 42, 55, 72, 87, 104, 119, 136, 151, 168, 183 };
+    memcpy(myArray, myArray2, sizeof(myArray2));
+  }
+
+  if (letter == "I") {
+    int myArray2[] = { 40, 55, 72, 87, 104, 119, 136, 151, 168, 183 };
+    memcpy(myArray, myArray2, sizeof(myArray2));
+  }
+
+  if (letter == "F") {
+    int myArray2[] = { 37, 38, 39, 40, 41, 42, 53, 74, 85, 101, 102, 103, 104, 105, 106, 117, 138, 149, 170, 181 };
+    memcpy(myArray, myArray2, sizeof(myArray2));
+  }
+
+  if (letter == " ") {
+    int myArray2[] = { 255 };
+    memcpy(myArray, myArray2, sizeof(myArray2));
+    c = strip.Color(0, 0, 0);
+  }
+
+  for (int element : myArray) {
+    if (element != 0) {
+      strip.setPixelColor(element, c);
+    }
+  }
+
+  strip.show();
+  delay(wait);
+  clear_display_background();
+}
+
+
+// ###########################################################################################################################################
+// # Wifi scan function to help you to setup your WiFi connection
+// ###########################################################################################################################################
+void ScanWiFi() {
+  Serial.println("Scan WiFi networks - START");
+  int n = WiFi.scanNetworks();
+  Serial.println("WiFi scan done");
+  Serial.println(" ");
+  if (n == 0) {
+    Serial.println("No WiFi networks found");
+  } else {
+    Serial.print(n);
+    Serial.println(" WiFi networks found:");
+    Serial.println(" ");
+    for (int i = 0; i < n; ++i) {
+      // Print SSID and RSSI for each network found
+      Serial.print(i + 1);
+      Serial.print(": ");
+      Serial.print(WiFi.SSID(i));
+      Serial.print(" (");
+      Serial.print(WiFi.RSSI(i));
+      Serial.print(")");
+      Serial.println((WiFi.encryptionType(i) == WIFI_AUTH_OPEN) ? " " : "*");
+      delay(10);
+    }
+  }
+  Serial.println("Scan WiFi networks - END");
+}
+
+
+// ###########################################################################################################################################
+// # Captive Portal web page to setup the device by AWSW:
+// ###########################################################################################################################################
+const char index_html[] PROGMEM = R"=====(
+  <!DOCTYPE html><html><head><title>WordClock</title></head>
+          <style>
+      body {
+      padding: 25px;
+      font-size: 25px;
+      background-color: black;
+      color: white;
+      }
+      </style>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+   <style>
+    .button {
+      display: inline-block;
+      padding: 15px 25px;
+      font-size: 24px;
+      cursor: pointer;
+      text-align: center;
+      text-decoration: none;
+      outline: none;
+      color: #fff;
+      background-color: #4CAF50;
+      border: none;
+      border-radius: 15px;
+      box-shadow: 0 9px #999;
+    }
+    .button:hover {background-color: #3e8e41}
+    .button:active {
+      background-color: #3e8e41;
+      box-shadow: 0 5px #666;
+      transform: translateY(4px);
+    }
+    </style>
+  
+  <body>
+    <form action="/start" name="myForm">
+      <center><b><h1>Welcome to the WordClock setup</h1></b>
+      <h2>Please add your local WiFi credentials<br/><br/>and other settings on the next page</h2><br/>
+      <input type="submit" value="Configure WordClock" class="button">
+     </center></form></body>
+  </html>
+ )=====";
+
+
+// ###########################################################################################################################################
+// # Captive Portal web page to setup the device by AWSW:
+// ###########################################################################################################################################
+const char config_html[] PROGMEM = R"rawliteral(
+ <!DOCTYPE HTML><html><head><title>WordClock</title>
+ <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script language="JavaScript">
+  <!--
+  function validateForm() {
+  var x = document.forms["myForm"]["mySSID"].value;
+  if (x == "") {
+    alert("WiFi SSID must be set");
+    return false;
+  }
+  var y = document.forms["myForm"]["myPW"].value;
+  if (y == "") {
+    alert("WiFi password must be set");
+    return false;
+  }
+  var y = document.forms["myForm"]["myBotToken"].value;
+  if (y == "") {
+    alert("Telegram bot token must be set");
+    return false;
+  }
+  var y = document.forms["myForm"]["myChatID"].value;
+  if (y == "") {
+    alert("Telegram chat id must be set");
+    return false;
+  }
+  var y = document.forms["myForm"]["myServer"].value;
+  if (y == "") {
+    alert("NTP time server must be set");
+    return false;
+  }
+  var y = document.forms["myForm"]["myZone"].value;
+  if (y == "") {
+    alert("Time zone must be set");
+    return false;
+  }
+  } 
+  //-->
+  </script>
+  </head>
+  
+   <style>
+      body {
+      padding: 25px;
+      font-size: 25px;
+      background-color: black;
+      color: white;
+      }
+      </style>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+   <style>
+    .button {
+      display: inline-block;
+      padding: 15px 25px;
+      font-size: 24px;
+      cursor: pointer;
+      text-align: center;
+      text-decoration: none;
+      outline: none;
+      color: #fff;
+      background-color: #4CAF50;
+      border: none;
+      border-radius: 15px;
+      box-shadow: 0 9px #999;
+    }
+    .button:hover {background-color: #3e8e41}
+    .button:active {
+      background-color: #3e8e41;
+      box-shadow: 0 5px #666;
+      transform: translateY(4px);
+    }
+    </style>
+  
+  <body>
+  <form action="/get" name="myForm" onsubmit="return validateForm()" >
+    <center><b><h1>Initial WordClock setup:</h1></b>
+    <label for="mySSID">Enter your WiFi SSID:</label><br/>
+    <input type="text" id="mySSID" name="mySSID" value="" style="width: 200px;" /><br/><br/>
+    <label for="myPW">Enter your WiFi password:</label><br/>
+    <input type="text" id="myPW" name="myPW" value="" style="width: 200px;" /><br/><br/>
+    <label for="setlanguage">Select your language layout:</label><br/>
+    <select id="setlanguage" name="setlanguage" style="width: 200px;">
+    <option value=0 selected>GERMAN</option>
+    <option value=1>ENGLISH</option>
+    <option value=2>DUTCH</option>
+    <option value=3>FRENCH</option>
+    </select><br/><br/>
+    <label for="myServer">Enter your NTP time server:</label><br/>
+    <input type="text" id="myServer" name="myServer" value="pool.ntp.org" style="width: 200px;" /><br/><br/>
+    <label for="myZone">Enter your tome zone: (<a href="https://github.com/nayarsystems/posix_tz_db/blob/master/zones.csv">GitHub</a>)</label><br/>
+    <input type="text" id="myZone" name="myZone" value="CET-1CEST,M3.5.0,M10.5.0/3" style="width: 200px;" /><br/><br/>
+    <label for="myBotToken">Enter your Telegram bot token: (Check settings.h how to get your own one)</label><br/>
+    <input type="text" id="myBotToken" name="myBotToken" value="XXXXXXXXXX:YYYYYYYYYYYYYYY-ZZZZZZZZZZZZZZZZZZZZ" style="width: 400px;" /><br/><br/>
+    <label for="myChatID">Enter your Telegram chat id: (Check settings.h how to get your own one)</label><br/>
+    <input type="text" id="myChatID" name="myChatID" value="1234512345" style="width: 200px;" /><br/><br/>
+    <input type="submit" value="Save values and start WordClock" class="button">
+  </center></form></body></html>)rawliteral";
+
+
+// ###########################################################################################################################################
+// # Captive Portal web page to setup the device by AWSW:
+// ###########################################################################################################################################
+const char saved_html[] PROGMEM = R"rawliteral(
+ <!DOCTYPE HTML><html><head>
+  <title>Initial WordClock setup</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1"></head>
+    <style>
+  body {
+      padding: 25px;
+      font-size: 25px;
+      background-color: black;
+      color: white;
+    }
+  </style>
+  <body>
+    <center><h2><b>Settings saved...<br><br>
+    WordClock will now try to connect to the named WiFi with the set language.<br>
+    If it failes the WIFI leds will flash red and then please try to connect to the temporary access point again.<br>
+    Please close this page now and enjoy your WordClock. =)</h2></b>
+ </body></html>)rawliteral";
+
+
+// ###########################################################################################################################################
+// # Captive Portal by AWSW to avoid the usage of the WiFi Manager library to have more control
+// ###########################################################################################################################################
+const char* PARAM_INPUT_1 = "mySSID";
+const char* PARAM_INPUT_2 = "myPW";
+const char* PARAM_INPUT_3 = "setlanguage";
+const char* PARAM_INPUT_4 = "myBotToken";
+const char* PARAM_INPUT_5 = "myChatID";
+const char* PARAM_INPUT_8 = "myServer";
+const char* PARAM_INPUT_9 = "myZone";
+const String captiveportalURL = "http://192.168.4.1";
+void CaptivePotalSetup() {
+  ScanWiFi();
+  const char* temp_ssid = "WordClock";
+  const char* temp_password = "";
+  WiFi.softAP(temp_ssid, temp_password);
+  Serial.println(" ");
+  Serial.println(" ");
+  Serial.println(" ");
+  Serial.println("#################################################################################################################################################################################");
+  Serial.print("# Temporary WiFi access point initialized. Please connect to the WiFi access point now and set your local WiFi credentials and WordClock language. Access point name: ");
+  Serial.println(temp_ssid);
+  Serial.print("# In case your browser does not open the WordClock setup page automatically after connecting to the access point, please navigate to this URL manually to http://");
+  Serial.println(WiFi.softAPIP());
+  Serial.println("#################################################################################################################################################################################");
+  Serial.println(" ");
+  Serial.println(" ");
+  Serial.println(" ");
+  dnsServer.start(53, "*", WiFi.softAPIP());
+
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest* request) {
+    request->send_P(200, "text/html", index_html);
+  });
+
+  server.on("/get", HTTP_GET, [](AsyncWebServerRequest* request) {
+    String inputMessage;
+    String inputParam;
+    if (request->hasParam(PARAM_INPUT_1)) {
+
+      inputMessage = request->getParam(PARAM_INPUT_1)->value();
+      inputParam = PARAM_INPUT_1;
+      // Serial.println(inputMessage);
+      preferences.putString("WIFIssid", inputMessage);  // Save entered WiFi SSID
+
+      inputMessage = request->getParam(PARAM_INPUT_2)->value();
+      inputParam = PARAM_INPUT_2;
+      // Serial.println(inputMessage);
+      preferences.putString("WIFIpass", inputMessage);  // Save entered WiFi password
+
+      inputMessage = request->getParam(PARAM_INPUT_3)->value();
+      inputParam = PARAM_INPUT_3;
+      // Serial.println(inputMessage);
+      preferences.putUInt("langLEDlayout", inputMessage.toInt());  // Save entered layout language
+
+      inputMessage = request->getParam(PARAM_INPUT_4)->value();
+      inputParam = PARAM_INPUT_4;
+      // Serial.println(inputMessage);
+      preferences.putString("iBotToken", inputMessage);  // Save entered Telegram bot token
+
+      inputMessage = request->getParam(PARAM_INPUT_5)->value();
+      inputParam = PARAM_INPUT_5;
+      // Serial.println(inputMessage);
+      preferences.putString("iChatID", inputMessage);  // Save entered Telegram chat id
+
+
+      inputMessage = request->getParam(PARAM_INPUT_8)->value();
+      inputParam = PARAM_INPUT_8;
+      // Serial.println(inputMessage);
+      preferences.putString("TimeServer", inputMessage);  // Save entered time server
+      inputMessage = request->getParam(PARAM_INPUT_9)->value();
+      inputParam = PARAM_INPUT_9;
+      // Serial.println(inputMessage);
+      preferences.putString("TimeZone", inputMessage);  // Save entered time zone
+
+
+      delay(250);
+      preferences.end();
+    } else {
+      inputMessage = "No message sent";
+      inputParam = "none";
+    }
+    request->send_P(200, "text/html", saved_html);
+    ResetTextLEDs(strip.Color(0, 255, 0));
+    delay(1000);
+    ESP.restart();
+  });
+
+  server.on("/start", HTTP_GET, [](AsyncWebServerRequest* request) {
+    request->send_P(200, "text/html", config_html);
+  });
+
+  server.on("/connecttest.txt", [](AsyncWebServerRequest* request) {
+    request->redirect(captiveportalURL);
+  });
+  server.on("msftconnecttest.com", [](AsyncWebServerRequest* request) {
+    request->redirect(captiveportalURL);
+  });
+  server.on("/fwlink", [](AsyncWebServerRequest* request) {
+    request->redirect(captiveportalURL);
+  });
+  server.on("/wpad.dat", [](AsyncWebServerRequest* request) {
+    request->send(404);
+  });
+  server.on("/generate_204", [](AsyncWebServerRequest* request) {
+    request->redirect(captiveportalURL);
+  });
+  server.on("/redirect", [](AsyncWebServerRequest* request) {
+    request->redirect(captiveportalURL);
+  });
+  server.on("/hotspot-detect.html", [](AsyncWebServerRequest* request) {
+    request->redirect(captiveportalURL);
+  });
+  server.on("/canonical.html", [](AsyncWebServerRequest* request) {
+    request->redirect(captiveportalURL);
+  });
+  server.on("/success.txt", [](AsyncWebServerRequest* request) {
+    request->send(200);
+  });
+  server.on("/ncsi.txt", [](AsyncWebServerRequest* request) {
+    request->redirect(captiveportalURL);
+  });
+  server.on("/chrome-variations/seed", [](AsyncWebServerRequest* request) {
+    request->send(200);
+  });
+  server.on("/service/update2/json", [](AsyncWebServerRequest* request) {
+    request->send(200);
+  });
+  server.on("/chat", [](AsyncWebServerRequest* request) {
+    request->send(404);
+  });
+  server.on("/startpage", [](AsyncWebServerRequest* request) {
+    request->redirect(captiveportalURL);
+  });
+  server.on("/favicon.ico", [](AsyncWebServerRequest* request) {
+    request->send(404);
+  });
+
+  server.on("/", HTTP_ANY, [](AsyncWebServerRequest* request) {
+    AsyncWebServerResponse* response = request->beginResponse(200, "text/html", index_html);
+    response->addHeader("Cache-Control", "public,max-age=31536000");
+    request->send(response);
+    Serial.println("Served Basic HTML Page");
+  });
+
+  server.onNotFound([](AsyncWebServerRequest* request) {
+    request->redirect(captiveportalURL);
+    Serial.print("onnotfound ");
+    Serial.print(request->host());
+    Serial.print(" ");
+    Serial.print(request->url());
+    Serial.print(" sent redirect to " + captiveportalURL + "\n");
+  });
+
+  server.begin();
+  Serial.println("WordClock Captive Portal web server started");
+}
+
+
+// ###########################################################################################################################################
+// # Wifi setup and reconnect function that runs once at startup and during the loop function of the ESP:
+// ###########################################################################################################################################
+void WIFI_SETUP() {
+  Serial.println(" ");
+  esp_log_level_set("wifi", ESP_LOG_WARN);  // Disable WiFi debug warnings
+  if (testTime == 0) {                      // If time text test mode is NOT used:
+    String WIFIssid = preferences.getString("WIFIssid");
+    bool WiFiConfigEmpty = false;
+    if (WIFIssid == "") {
+      // Serial.println("WIFIssid empty");
+      WiFiConfigEmpty = true;
+    } else {
+      // Serial.print("WIFIssid = ");
+      // Serial.println(WIFIssid);
+    }
+    String WIFIpass = preferences.getString("WIFIpass");
+    if (WIFIpass == "") {
+      // Serial.println("WIFIpass empty");
+      WiFiConfigEmpty = true;
+    } else {
+      // Serial.print("WIFIpass = ");
+      // Serial.println(WIFIpass);
+    }
+    if (WiFiConfigEmpty == true) {
+      Serial.println("Show SET WIFI...");
+      uint32_t c = strip.Color(0, 255, 255);
+      int TextWait = 500;
+      showtext("S", TextWait, c);
+      showtext("E", TextWait, c);
+      showtext("T", TextWait, c);
+      showtext(" ", TextWait, c);
+      showtext("W", TextWait, c);
+      showtext("I", TextWait, c);
+      showtext("F", TextWait, c);
+      showtext("I", TextWait, c);
+      showtext(" ", TextWait, c);
+      CaptivePotalSetup();
+      SetWLAN(strip.Color(0, 255, 255));
+    } else {
+      Serial.println("Try to connect to found WiFi configuration: ");
+      WiFi.disconnect();
+      int tryCount = 0;
+      WiFi.mode(WIFI_STA);
+      WiFi.begin((const char*)WIFIssid.c_str(), (const char*)WIFIpass.c_str());
+      Serial.println("Connecting to WiFi " + String(WIFIssid));
+      while (WiFi.status() != WL_CONNECTED) {
+        SetWLAN(strip.Color(0, 0, 255));
+        tryCount = tryCount + 1;
+        Serial.print("Connection try #: ");
+        Serial.print(tryCount);
+        Serial.print(" of maximum ");
+        Serial.println(maxWiFiconnctiontries);
+        if (tryCount >= maxWiFiconnctiontries - 10) {
+          SetWLAN(strip.Color(255, 0, 0));
+        }
+        if (tryCount == maxWiFiconnctiontries) {
+          Serial.println("\n\nWIFI CONNECTION ERROR: If the connection still can not be established please check the WiFi settings or location of the device.\n\n");
+          preferences.putString("WIFIssid", "");  // Reset entered WiFi ssid
+          preferences.putString("WIFIpass", "");  // Reset entered WiFi password
+          preferences.end();
+          delay(250);
+          Serial.println("WiFi settings deleted because in " + String(maxWiFiconnctiontries) + " tries the WiFi connection could not be established. Temporary WordClock access point will be started to reconfigure WiFi again.");
+          ESP.restart();
+        }
+        delay(500);
+        SetWLAN(strip.Color(0, 0, 0));
+        delay(500);
+      }
+      Serial.println(" ");
+      WiFIsetup = true;
+      Serial.print("Successfully connected now to WiFi SSID: ");
+      Serial.println(WiFi.SSID());
+      Serial.println("IP: " + WiFi.localIP().toString());
+      Serial.println("DNS: " + WiFi.dnsIP().toString());
+      SetWLAN(strip.Color(0, 255, 0));
+      delay(1000);
+
+      if (useshowip == 1) ShowIPaddress();                  // Display the current IP-address
+      configNTPTime();                                      // NTP time setup
+      setupWebInterface();                                  // Generate the configuration page
+      updatenow = true;                                     // Update the display 1x after startup
+      update_display();                                     // Update LED display
+      handleLEDupdate();                                    // LED update via web
+      setupOTAupate();                                      // ESP32 OTA update
+      secured_client.setCACert(TELEGRAM_CERTIFICATE_ROOT);  // Add root certificate for api.telegram.org
+      if (useTelegram) {                                    // Telegram support and send 1st message after startup
+        Serial.println("Send initial Telegram message: WordClock " + String(WORD_CLOCK_VERSION) + " start finished");
+        bot.sendMessage(CHAT_ID.c_str(), "WordClock " + String(WORD_CLOCK_VERSION) + " start finished " + emoStartup + "\n\nPlease use /start to show the commands list.\n\nWeb interface online at: http://" + IpAddress2String(WiFi.localIP()) + "\n\nSmart home web URL examples: http://" + IpAddress2String(WiFi.localIP()) + ":2023", "");
+      }
+      Serial.println("######################################################################");
+      Serial.println("# Web interface online at: http://" + IpAddress2String(WiFi.localIP()));
+      Serial.println("# HTTP controls online at: http://" + IpAddress2String(WiFi.localIP()) + ":2023");
+      Serial.println("######################################################################");
+      Serial.println("# WordClock startup finished...");
+      Serial.println("######################################################################");
+      Serial.println(" ");
+    }
+  }
 }
 
 

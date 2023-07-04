@@ -6,7 +6,7 @@
 // #
 // # Released under license: GNU General Public License v3.0: https://github.com/AWSW-de/WordClock-16x16-LED-matrix/blob/main/LICENSE
 // #
-// # Compatible with WordClock version: V1.5.0
+// # Compatible with WordClock version: V1.8.0
 // #
 // ###########################################################################################################################################
 /*
@@ -27,37 +27,9 @@
 // ###########################################################################################################################################
 // # Hardware settings:
 // ###########################################################################################################################################
-#define LEDPIN 32      // Arduino-Pin connected to the NeoPixels
-#define NUMPIXELS 256  // How many NeoPixels are attached to the Arduino
-Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUMPIXELS, LEDPIN, NEO_GRB + NEO_KHZ800);
-
-
-// ###########################################################################################################################################
-// # LED intensity setting:
-// ###########################################################################################################################################
-#define LEDintensityLIMIT 64  // off 255 max. !!! Do NOT change this if you don't know how much power drain this may cause to avoid damage !!!
-// Limit the intensity level to be able to select in the configuration to avoid to much power drain and to avoid hardware failures over time.
-// In case you want to use the device over longer times with a higher intensity or even higher, you will need to consider a much more
-// powerful power supply, a better cable to connect the device and you have to power the matrix directly to 5V of the power supply.
-// Otherwise the ESP32 can fail over time. Therefore this setting is limited and should not be raised. !!! You have been warned !!!
-// In case you really need a higher value, you need to make sure to power the matrix directly so that the power is not served over the ESP32
-// to the matrix to avoid its damage over time.
-// Please think about if you really need such a high intensity value. The WordClocks used from me run at a maximum intensity of 33 which is
-// really bright in my eyes and all levels above 64 i could not see really an advantage anymore that the display is better able to view...
-// !!! Make sure to use propper components !!!
-
-
-// ###########################################################################################################################################
-// # LED language layout default: !!! SET YOUR DEFAULT LANGUAGE HERE !!!
-// ###########################################################################################################################################
-int langLEDlayout_default = 0;  // LED language layout default
-// Available languages:
-// ####################
-// 0 = DE   - GERMAN
-// 1 = EN   - ENGLISH
-// 2 = NL   - DUTCH
-// 3 = FR   - FRENCH
-// NOTE: You may need to use the "Reset WordClock settings"-button to update the value on the device
+#define LEDPIN 32                                                                      // Arduino-Pin connected to the NeoPixels
+#define NUMPIXELS 256                                                                  // How many NeoPixels are attached to the Arduino
+Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUMPIXELS, LEDPIN, NEO_GRB + NEO_KHZ800);  // Init LED matrix
 
 
 // ###########################################################################################################################################
@@ -112,28 +84,15 @@ int blueVal_ew11_default = 158;  // Default ew11 color BLUE
 int redVal_ew12_default = 255;   // Default ew12 color RED
 int greenVal_ew12_default = 0;   // Default ew12 color GREEN
 int blueVal_ew12_default = 0;    // Default ew12 color BLUE
-// Extra word defauls init:
-int ew1_default = 0;   // Extra Word 1
-int ew2_default = 0;   // Extra Word 2
-int ew3_default = 0;   // Extra Word 3
-int ew4_default = 0;   // Extra Word 4
-int ew5_default = 0;   // Extra Word 5
-int ew6_default = 0;   // Extra Word 6
-int ew7_default = 0;   // Extra Word 7
-int ew8_default = 0;   // Extra Word 8
-int ew9_default = 0;   // Extra Word 9
-int ew10_default = 0;  // Extra Word 10
-int ew11_default = 0;  // Extra Word 11
-int ew12_default = 0;  // Extra Word 12
 
 
 // ###########################################################################################################################################
 // # Various default settings:
 // ###########################################################################################################################################
-#define AP_TIMEOUT 240          // Timeout in seconds for AP / WLAN config
-int useshowip_default = 1;      // Show the current ip at boot
-int useTelegram_default = 0;    // Use Telegram support
-int useTelegramID_default = 0;  // React to your own Telegram CHAT_ID only
+int useshowip_default = 1;       // Show the current ip at boot
+int useTelegram_default = 0;     // Use Telegram support
+int useTelegramID_default = 1;   // React to your own Telegram CHAT_ID only
+int maxWiFiconnctiontries = 50;  // Maximum connection tries to logon to the set WiFi. After the amount of tries is reached the WiFi settings will be deleted!
 
 
 // ###########################################################################################################################################
@@ -141,13 +100,6 @@ int useTelegramID_default = 0;  // React to your own Telegram CHAT_ID only
 // ###########################################################################################################################################
 #define DEFAULT_AP_NAME "WordClock"  // WiFi access point name of the ESP32
 const char* hostname = "WordClock";  // Hostname to be set in your router
-
-
-// ###########################################################################################################################################
-// # NTP time server settings:
-// ###########################################################################################################################################
-const char* Timezone = "CET-1CEST,M3.5.0,M10.5.0/3";  // You can check a list of timezone string variables here:  https://github.com/nayarsystems/posix_tz_db/blob/master/zones.csv
-const char* NTPserver = "pool.ntp.org";               // Time server address. Choose the closest one to you here: https://gist.github.com/mutin-sa/eea1c396b1e610a2da1e5550d94b0453
 
 
 // ###########################################################################################################################################
@@ -163,16 +115,14 @@ String emoInactive = "\xF0\x9F\x91\x8E";
 // 2.: Then type: "/newbot"
 // 3.: Set a name for the new bot when requested
 // 4.: Set a username for the new bot when requested
-// 5.: Check the "Done! Congratulations" message for the line after "Use this token to access the HTTP API:" and add this line to the setting above here:
-#define BOTtoken "XXXXXXXXXX:YYYYYYYYYYYYYYY-ZZZZZZZZZZZZZZZZZZZZ"
+// 5.: Check the "Done! Congratulations" message for the line after "Use this token to access the HTTP API:" and add this "bor token" string 1:1 during the initial WordClock setup where you set the WiFi settings too.
 // 6.: Leave the "BotFather" and search for your new bot name.
 // 7.: Select your new created bot and use the "/start" command or the "Start"-button to activate the bot
 // ###########################################################################################################################################
-// 8.: Get your chat id for your own Telegram messanger:
+// 8.: Get your "chat id" for your own Telegram messanger:
 // 9.: In Telegram search user "IDBot" and use the "Start" button
 // 10.: Then type: "/getid"
-// 11.: Copy your own Telegram ID and add this number to the setting above here:
-#define CHAT_ID "1234512345"
+// 11.: Copy your own Telegram ID and add this number and add this string 1:1 during the initial WordClock setup where you set the WiFi settings too.
 // 12.: Use the button "Reset WordClock settings" in the web configuration to save these values into the connfiguration or add them in the web config manually.
 // 13.: Activate the Telegram support in the web config and restart the device
 // 14: Add this to the Telegram menu:
@@ -268,6 +218,21 @@ ew9 - DATE text
 // ###########################################################################################################################################
 int testTime = 0;   // LED text output test from 00:00 to 23:29 o'clock. Each minute is 1 second in the test
 int debugmode = 0;  // Debug messages output on serial monitor
+
+
+// ###########################################################################################################################################
+// # LED intensity setting:
+// ###########################################################################################################################################
+#define LEDintensityLIMIT 64  // off 255 max. !!! Do NOT change this if you don't know how much power drain this may cause to avoid damage !!!
+// Limit the intensity level to be able to select in the configuration to avoid to much power drain and to avoid hardware failures over time.
+// In case you want to use the device over longer times with a higher intensity or even higher, you will need to consider a much more
+// powerful power supply, a better cable to connect the device and you have to power the matrix directly to 5V of the power supply.
+// Otherwise the ESP32 can fail over time. Therefore this setting is limited and should not be raised. !!! You have been warned !!!
+// In case you really need a higher value, you need to make sure to power the matrix directly so that the power is not served over the ESP32
+// to the matrix to avoid its damage over time.
+// Please think about if you really need such a high intensity value. The WordClocks used from me run at a maximum intensity of 33 which is
+// really bright in my eyes and all levels above 64 i could not see really an advantage anymore that the display is better able to view...
+// !!! Make sure to use propper components !!!
 
 
 // ###########################################################################################################################################
