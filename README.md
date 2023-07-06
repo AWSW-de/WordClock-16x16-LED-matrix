@@ -8,21 +8,12 @@ Setup video instructions available for <a href="https://www.youtube.com/watch?v=
 
 WordClock can be used in "Online Mode" with all the smart functions controlled via your network environment and otional via Telegram and also in "Offline Mode" where you can use the time piece function only without the need of a local WiFi. In both operation modes you can configure the device via the shown internal web portal.
 
-Layouts for DE, EN, NL and FR available:
+**Layouts for DE, EN, NL and FR available:**
 
 <img src="./Images/WordClock_DE_EN.png">
-
 <img src="./Images/WordClock_NL.jpg">
-
 <img src="./Images/WordClock_FR.jpg">
 
-
-Internal configuration web interface:
-
-<img src="./Images/WordClock_web1.PNG">
-<img src="./Images/WordClock_web2.PNG">
-<img src="./Images/WordClock_web3.PNG">
-<img src="./Images/WordClock_web4.JPG">
 
 
 **Pictures of the “Online Mode” of V2.0.0:** 
@@ -32,6 +23,15 @@ Internal configuration web interface:
 ![IMG_0821](https://github.com/AWSW-de/WordClock-16x16-LED-matrix/assets/34800740/452cade3-9ad4-4d98-b10f-fca2410ee886)
 
 
+
 **Pictures of the “Offline Mode” of V2.0.0:**
 ![IMG_0816](https://github.com/AWSW-de/WordClock-16x16-LED-matrix/assets/34800740/dc3d8a1a-e9b1-4adf-8c21-5a82cbfeddf0)
 ![IMG_0817](https://github.com/AWSW-de/WordClock-16x16-LED-matrix/assets/34800740/721a8674-4345-4932-8c22-07afe51ab68b)
+
+
+
+**Internal configuration web interface:**
+<img src="./Images/WordClock_web1.PNG">
+<img src="./Images/WordClock_web2.PNG">
+<img src="./Images/WordClock_web3.PNG">
+<img src="./Images/WordClock_web4.JPG">
