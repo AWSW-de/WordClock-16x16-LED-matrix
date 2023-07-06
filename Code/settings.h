@@ -6,7 +6,7 @@
 // #
 // # Released under license: GNU General Public License v3.0: https://github.com/AWSW-de/WordClock-16x16-LED-matrix/blob/main/LICENSE
 // #
-// # Compatible with WordClock version: V1.8.0
+// # Compatible with WordClock version: V2.0.0
 // #
 // ###########################################################################################################################################
 /*
@@ -22,6 +22,20 @@
     \::/  /       \::/  /       |:|  |        \::/__/       \:\__\        \:\__\    \::/  /       \:\__\        |:|  |    
      \/__/         \/__/         \|__|         ~~            \/__/         \/__/     \/__/         \/__/         \|__|    
 */
+
+
+// ###########################################################################################################################################
+// # Default language:
+// 
+// 0 = German
+// 1 = English
+// 2 = Dutch
+// 3 = French
+//
+// Set your language layout here:
+// 
+// ###########################################################################################################################################
+int langLEDlayout_default = 0;
 
 
 // ###########################################################################################################################################
@@ -111,28 +125,28 @@ String emoActive = "\xF0\x9F\x91\x8D";
 String emoInactive = "\xF0\x9F\x91\x8E";
 
 // Telegram new BOT creation:
+// ###########################################################################################################################################
 // 1.: In Telegram search user "BotFather" and use the "Start" button
 // 2.: Then type: "/newbot"
 // 3.: Set a name for the new bot when requested
 // 4.: Set a username for the new bot when requested
-// 5.: Check the "Done! Congratulations" message for the line after "Use this token to access the HTTP API:" and add this "bor token" string 1:1 during the initial WordClock setup where you set the WiFi settings too.
+// 5.: Check the "Done! Congratulations" message for the line after "Use this token to access the HTTP API:" and add this "bot token" string 1:1 during the initial WordClock setup where you set the WiFi settings too.
 // 6.: Leave the "BotFather" and search for your new bot name.
 // 7.: Select your new created bot and use the "/start" command or the "Start"-button to activate the bot
 // ###########################################################################################################################################
 // 8.: Get your "chat id" for your own Telegram messanger:
 // 9.: In Telegram search user "IDBot" and use the "Start" button
 // 10.: Then type: "/getid"
-// 11.: Copy your own Telegram ID and add this number and add this string 1:1 during the initial WordClock setup where you set the WiFi settings too.
-// 12.: Use the button "Reset WordClock settings" in the web configuration to save these values into the connfiguration or add them in the web config manually.
-// 13.: Activate the Telegram support in the web config and restart the device
-// 14: Add this to the Telegram menu:
-//   If you like to have a menu with all the available commands just edit the created bot using BotFather again:
+// 11.: Copy your own Telegram ID and add this number 1:1 during the initial WordClock setup where you set the WiFi settings too.
+// 12.: Activate the Telegram support in the web config and restart the device
+// 13.: Add this to the Telegram menu, if you like to have a menu with all the available commands just edit the created bot using BotFather again:
 // - In Telegram search user "BotFather" and use the "Start" button
 // - /mybots
 // - Select your bot
 // - Select "Edit bot"
 // - Select "Edit Commands"
 // - Follow the instruction to set up the menu entries - example (send without the "/* LANGUAGE:" and "*/"):
+// ###########################################################################################################################################
 
 
 /* DE:
