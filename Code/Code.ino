@@ -58,7 +58,7 @@
 // ###########################################################################################################################################
 // # Version number of the code:
 // ###########################################################################################################################################
-const char* WORD_CLOCK_VERSION = "V2.0.0";
+const char* WORD_CLOCK_VERSION = "V2.1.0";
 
 
 // ###########################################################################################################################################
@@ -85,6 +85,7 @@ bool updatedevice = true;
 bool updatenow = false;
 bool updatemode = false;
 bool changedvalues = false;
+bool ResetExtraWords = false;
 int WiFiManFix = 0;
 String iStartTime = "-";
 int redVal_back, greenVal_back, blueVal_back;
@@ -346,63 +347,63 @@ void setupWebInterface() {
     char hex_ew1[7] = { 0 };
     sprintf(hex_ew1, "#%02X%02X%02X", redVal_ew1, greenVal_ew1, blueVal_ew1);
     uint16_t text_colour_ew1;
-    text_colour_ew1 = ESPUI.text(ewtext1.c_str(), colCallew, ControlColor::Dark, hex_ew1);
+    text_colour_ew1 = ESPUI.text(ewtext1.c_str(), colCallew, ControlColor::Dark, hex_ew1, (void*)1);
     ESPUI.setInputType(text_colour_ew1, "color");
 
     // Color Extra Word ew2:
     char hex_ew2[7] = { 0 };
     sprintf(hex_ew2, "#%02X%02X%02X", redVal_ew2, greenVal_ew2, blueVal_ew2);
     uint16_t text_colour_ew2;
-    text_colour_ew2 = ESPUI.text(ewtext2.c_str(), colCallew, ControlColor::Dark, hex_ew2);
+    text_colour_ew2 = ESPUI.text(ewtext2.c_str(), colCallew, ControlColor::Dark, hex_ew2, (void*)2);
     ESPUI.setInputType(text_colour_ew2, "color");
 
     // Color Extra Word ew3:
     char hex_ew3[7] = { 0 };
     sprintf(hex_ew3, "#%02X%02X%02X", redVal_ew3, greenVal_ew3, blueVal_ew3);
     uint16_t text_colour_ew3;
-    text_colour_ew3 = ESPUI.text(ewtext3.c_str(), colCallew, ControlColor::Dark, hex_ew3);
+    text_colour_ew3 = ESPUI.text(ewtext3.c_str(), colCallew, ControlColor::Dark, hex_ew3, (void*)3);
     ESPUI.setInputType(text_colour_ew3, "color");
 
     // Color Extra Word ew4:
     char hex_ew4[7] = { 0 };
     sprintf(hex_ew4, "#%02X%02X%02X", redVal_ew4, greenVal_ew4, blueVal_ew4);
     uint16_t text_colour_ew4;
-    text_colour_ew4 = ESPUI.text(ewtext4.c_str(), colCallew, ControlColor::Dark, hex_ew4);
+    text_colour_ew4 = ESPUI.text(ewtext4.c_str(), colCallew, ControlColor::Dark, hex_ew4, (void*)4);
     ESPUI.setInputType(text_colour_ew4, "color");
 
     // Color Extra Word ew5:
     char hex_ew5[7] = { 0 };
     sprintf(hex_ew5, "#%02X%02X%02X", redVal_ew5, greenVal_ew5, blueVal_ew5);
     uint16_t text_colour_ew5;
-    text_colour_ew5 = ESPUI.text(ewtext5.c_str(), colCallew, ControlColor::Dark, hex_ew5);
+    text_colour_ew5 = ESPUI.text(ewtext5.c_str(), colCallew, ControlColor::Dark, hex_ew5, (void*)5);
     ESPUI.setInputType(text_colour_ew5, "color");
 
     // Color Extra Word ew6:
     char hex_ew6[7] = { 0 };
     sprintf(hex_ew6, "#%02X%02X%02X", redVal_ew6, greenVal_ew6, blueVal_ew6);
     uint16_t text_colour_ew6;
-    text_colour_ew6 = ESPUI.text(ewtext6.c_str(), colCallew, ControlColor::Dark, hex_ew6);
+    text_colour_ew6 = ESPUI.text(ewtext6.c_str(), colCallew, ControlColor::Dark, hex_ew6, (void*)6);
     ESPUI.setInputType(text_colour_ew6, "color");
 
     // Color Extra Word ew7:
     char hex_ew7[7] = { 0 };
     sprintf(hex_ew7, "#%02X%02X%02X", redVal_ew7, greenVal_ew7, blueVal_ew7);
     uint16_t text_colour_ew7;
-    text_colour_ew7 = ESPUI.text(ewtext7.c_str(), colCallew, ControlColor::Dark, hex_ew7);
+    text_colour_ew7 = ESPUI.text(ewtext7.c_str(), colCallew, ControlColor::Dark, hex_ew7, (void*)7);
     ESPUI.setInputType(text_colour_ew7, "color");
 
     // Color Extra Word ew8:
     char hex_ew8[7] = { 0 };
     sprintf(hex_ew8, "#%02X%02X%02X", redVal_ew8, greenVal_ew8, blueVal_ew8);
     uint16_t text_colour_ew8;
-    text_colour_ew8 = ESPUI.text(ewtext8.c_str(), colCallew, ControlColor::Dark, hex_ew8);
+    text_colour_ew8 = ESPUI.text(ewtext8.c_str(), colCallew, ControlColor::Dark, hex_ew8, (void*)8);
     ESPUI.setInputType(text_colour_ew8, "color");
 
     // Color Extra Word ew9:
     char hex_ew9[7] = { 0 };
     sprintf(hex_ew9, "#%02X%02X%02X", redVal_ew9, greenVal_ew9, blueVal_ew9);
     uint16_t text_colour_ew9;
-    text_colour_ew9 = ESPUI.text(ewtext9.c_str(), colCallew, ControlColor::Dark, hex_ew9);
+    text_colour_ew9 = ESPUI.text(ewtext9.c_str(), colCallew, ControlColor::Dark, hex_ew9, (void*)9);
     ESPUI.setInputType(text_colour_ew9, "color");
 
     if (langLEDlayout == 0) {  // DE has 12 extra words only:
@@ -410,21 +411,21 @@ void setupWebInterface() {
       char hex_ew10[7] = { 0 };
       sprintf(hex_ew10, "#%02X%02X%02X", redVal_ew10, greenVal_ew10, blueVal_ew10);
       uint16_t text_colour_ew10;
-      text_colour_ew10 = ESPUI.text(ewtext10.c_str(), colCallew, ControlColor::Dark, hex_ew10);
+      text_colour_ew10 = ESPUI.text(ewtext10.c_str(), colCallew, ControlColor::Dark, hex_ew10, (void*)10);
       ESPUI.setInputType(text_colour_ew10, "color");
 
       // Color Extra Word ew11:
       char hex_ew11[7] = { 0 };
       sprintf(hex_ew11, "#%02X%02X%02X", redVal_ew11, greenVal_ew11, blueVal_ew11);
       uint16_t text_colour_ew11;
-      text_colour_ew11 = ESPUI.text(ewtext11.c_str(), colCallew, ControlColor::Dark, hex_ew11);
+      text_colour_ew11 = ESPUI.text(ewtext11.c_str(), colCallew, ControlColor::Dark, hex_ew11, (void*)11);
       ESPUI.setInputType(text_colour_ew11, "color");
 
       // Color Extra Word ew12:
       char hex_ew12[7] = { 0 };
       sprintf(hex_ew12, "#%02X%02X%02X", redVal_ew12, greenVal_ew12, blueVal_ew12);
       uint16_t text_colour_ew12;
-      text_colour_ew12 = ESPUI.text(ewtext12.c_str(), colCallew, ControlColor::Dark, hex_ew12);
+      text_colour_ew12 = ESPUI.text(ewtext12.c_str(), colCallew, ControlColor::Dark, hex_ew12, (void*)12);
       ESPUI.setInputType(text_colour_ew12, "color");
     }
 
@@ -773,6 +774,14 @@ void setFlashValues() {
 // # GUI: Restart the WordClock:
 // ###########################################################################################################################################
 void buttonRestart(Control* sender, int type, void* param) {
+  RestartWordClock();
+}
+
+
+// ###########################################################################################################################################
+// # Restart the WordClock:
+// ###########################################################################################################################################
+void RestartWordClock() {
   updatedevice = false;
   delay(250);
   if (changedvalues == true) {
@@ -1728,8 +1737,6 @@ void switchOffline(Control* sender, int value) {
 }
 
 
-
-
 // ###########################################################################################################################################
 // # GUI: React to your own Telegram CHAT_ID only switch:
 // ###########################################################################################################################################
@@ -1772,19 +1779,11 @@ void switchSingleMinutes(Control* sender, int value) {
 // # Update the display / time on it:
 // ###########################################################################################################################################
 void update_display() {
-  // Set LED intensity:
-  if ((usenightmode == 1) && (set_web_intensity == 0)) {
-    if ((iHour >= day_time_start) && (iHour <= day_time_stop)) {
-      intensity = intensity_day;
-      if ((iHour == 0) && (day_time_stop == 23)) intensity = intensity_night;  // Special function if day_time_stop set to 23 and time is 24, so 0..
-    } else {
-      intensity = intensity_night;
-    }
-  } else {
-    if (set_web_intensity == 0) intensity = intensity_day;
-    if (set_web_intensity == 1) intensity = intensity_web;
+  // Reset ResetExtraWords at midnight:
+  if ((iHour == 0) && (iMinute == 0) && (iSecond == 0) && (ResetExtraWords == true)) {
+    ResetExtraWords = false;
+    if (debugmode == 1) Serial.println("ResetExtraWords set to false again... Extra words will be displayed again...");
   }
-  strip.setBrightness(intensity);
 
   // Test day/night times function:
   // Serial.println("############################################################################################");
@@ -1799,7 +1798,6 @@ void update_display() {
   //   Serial.println("Current hour: " + String(i) + " day_time_start: " + String(day_time_start) + " day_time_stop: " + String(day_time_stop) + " --> " + daynightvar);
   // }
   // Serial.println("############################################################################################");
-
 
   if (testTime == 0) {  // Show the current time:
     show_time(iHour, iMinute);
@@ -1825,14 +1823,30 @@ void update_display() {
 void show_time(int hours, int minutes) {
   static int lastHourSet = -1;
   static int lastMinutesSet = -1;
-  if ((lastHourSet == hours && lastMinutesSet == minutes) && updatenow == false) {  // Reduce display updates to new minutes and new config updates
-    return;
+  if (updatenow == false) {
+    if (lastHourSet == hours && lastMinutesSet == minutes) {  // Reduce display updates to new minutes and new config updates
+      return;
+    }
   }
+  updatenow = false;
   String currentTime = String(hours) + ":" + String(minutes) + ":" + String(iSecond);
   if (debugmode == 1) Serial.println("Update LED display now at: " + currentTime);
-  updatenow = false;
   lastHourSet = hours;
   lastMinutesSet = minutes;
+
+  // Set LED intensity:
+  if ((usenightmode == 1) && (set_web_intensity == 0)) {
+    if ((iHour >= day_time_start) && (iHour <= day_time_stop)) {
+      intensity = intensity_day;
+      if ((iHour == 0) && (day_time_stop == 23)) intensity = intensity_night;  // Special function if day_time_stop set to 23 and time is 24, so 0..
+    } else {
+      intensity = intensity_night;
+    }
+  } else {
+    if (set_web_intensity == 0) intensity = intensity_day;
+    if (set_web_intensity == 1) intensity = intensity_web;
+  }
+  strip.setBrightness(intensity);
 
   // Set background color:
   back_color();
@@ -2756,12 +2770,10 @@ void colCallBACK(Control* sender, int type) {
 // ###########################################################################################################################################
 // # GUI: Color change for Extra Word ew1 to ew12:
 // ###########################################################################################################################################
-void colCallew(Control* sender, int type) {
+void colCallew(Control* sender, int type, void* param) {
   updatedevice = false;
   delay(1000);
   sender->value.toUpperCase();
-  // Serial.print("Sender: ");
-  // Serial.println(sender->id);
 
   char c[7];
   sender->value.toCharArray(c, 8);
@@ -2769,32 +2781,29 @@ void colCallew(Control* sender, int type) {
   int green = hexcolorToInt(c[3], c[4]);
   int blue = hexcolorToInt(c[5], c[6]);
 
-  int ewnum = sender->id;
-  // Serial.print("ewnum: ");
-  // Serial.println(ewnum);
-  switch (ewnum) {
-    case 25:
+  switch ((int)param) {
+    case 1:
       {
         redVal_ew1 = red;
         greenVal_ew1 = green;
         blueVal_ew1 = blue;
         break;
       }
-    case 26:
+    case 2:
       {
         redVal_ew2 = red;
         greenVal_ew2 = green;
         blueVal_ew2 = blue;
         break;
       }
-    case 27:
+    case 3:
       {
         redVal_ew3 = red;
         greenVal_ew3 = green;
         blueVal_ew3 = blue;
         break;
       }
-    case 28:
+    case 4:
       {
         redVal_ew4 = red;
         greenVal_ew4 = green;
@@ -2802,56 +2811,56 @@ void colCallew(Control* sender, int type) {
         break;
       }
 
-    case 29:
+    case 5:
       {
         redVal_ew5 = red;
         greenVal_ew5 = green;
         blueVal_ew5 = blue;
         break;
       }
-    case 30:
+    case 6:
       {
         redVal_ew6 = red;
         greenVal_ew6 = green;
         blueVal_ew6 = blue;
         break;
       }
-    case 31:
+    case 7:
       {
         redVal_ew7 = red;
         greenVal_ew7 = green;
         blueVal_ew7 = blue;
         break;
       }
-    case 32:
+    case 8:
       {
         redVal_ew8 = red;
         greenVal_ew8 = green;
         blueVal_ew8 = blue;
         break;
       }
-    case 33:
+    case 9:
       {
         redVal_ew9 = red;
         greenVal_ew9 = green;
         blueVal_ew9 = blue;
         break;
       }
-    case 34:
+    case 10:
       {
         redVal_ew10 = red;
         greenVal_ew10 = green;
         blueVal_ew10 = blue;
         break;
       }
-    case 35:
+    case 11:
       {
         redVal_ew11 = red;
         greenVal_ew11 = green;
         blueVal_ew11 = blue;
         break;
       }
-    case 36:
+    case 12:
       {
         redVal_ew12 = red;
         greenVal_ew12 = green;
@@ -3133,6 +3142,22 @@ void handleNewMessages(int numNewMessages) {
 // # Set extra words:
 // ###########################################################################################################################################
 void set_extra_words() {
+  // Reset extra words to off until 00:00:00:
+  if (ResetExtraWords == true) {
+    ew1 = 0;
+    ew2 = 0;
+    ew3 = 0;
+    ew4 = 0;
+    ew5 = 0;
+    ew6 = 0;
+    ew7 = 0;
+    ew8 = 0;
+    ew9 = 0;
+    ew10 = 0;
+    ew11 = 0;
+    ew12 = 0;
+  }
+
   // ########################################################### DE:
   if (langLEDlayout == 0) {  // DE:
     if (ew1 == 1) {
@@ -3613,7 +3638,11 @@ void handleLEDupdate() {                                            // LED serve
     message = message + "Get status of a single extra word:\n";
     message = message + "http://" + IpAddress2String(WiFi.localIP()) + ":2023/ewstatus/?1 --> Status of extra word 1\n";
     message = message + "http://" + IpAddress2String(WiFi.localIP()) + ":2023/ewstatus/?3 --> Status of extra word 3\n";
-    message = message + "http://" + IpAddress2String(WiFi.localIP()) + ":2023/ewstatus/?9 --> Status of extra word 9\n";
+    message = message + "http://" + IpAddress2String(WiFi.localIP()) + ":2023/ewstatus/?9 --> Status of extra word 9\n\n";
+    message = message + "Set all extra words off until midnight:\n";
+    message = message + "http://" + IpAddress2String(WiFi.localIP()) + ":2023/resetew1 --> Set all extra words off until midnight\n";
+    message = message + "http://" + IpAddress2String(WiFi.localIP()) + ":2023/resetew0 --> Set all extra words outputs active again\n";
+    message = message + "http://" + IpAddress2String(WiFi.localIP()) + ":2023/resetewstatus --> Get the status of this switch\n";
     request->send(200, "text/plain", message);
   });
 
@@ -3679,8 +3708,30 @@ void handleLEDupdate() {                                            // LED serve
     request->send(200, "text/plain", message);
   });
 
-  ledserver.on("/intensity", HTTP_GET, [](AsyncWebServerRequest* request) {  // Show the status of all extra words and the color for the background and time texts:
+  ledserver.on("/intensity", HTTP_GET, [](AsyncWebServerRequest* request) {  // Set intensity:
     String message = String(set_web_intensity);
+    request->send(200, "text/plain", message);
+  });
+
+  ledserver.on("/resetew1", HTTP_GET, [](AsyncWebServerRequest* request) {  // Set all extra words off until midnight:
+    if (debugmode == 1) Serial.println("ResetExtraWords set to true... Extra words will NOT be displayed until midnight...");
+    ResetExtraWords = true;
+    updatenow = true;
+    String message = "Set all extra words off until midnight...";
+    request->send(200, "text/plain", message);
+  });
+
+  ledserver.on("/resetew0", HTTP_GET, [](AsyncWebServerRequest* request) {  // Set all extra words outputs active again:
+    if (debugmode == 1) Serial.println("ResetExtraWords set to false... Extra words will be displayed again... WordClock will resetart now...");
+    String message = "Set all extra words outputs active again... WordClock will resetart now...";
+    request->send(200, "text/plain", message);
+    delay(2000);
+    RestartWordClock();
+  });
+
+  ledserver.on("/resetewstatus", HTTP_GET, [](AsyncWebServerRequest* request) {  // Status of the Extra Words reset switch:
+    if (debugmode == 1) Serial.println("Status of the Extra Words reset switch: " + String(ResetExtraWords));
+    String message = "Status of the Extra Words reset switch: " + String(ResetExtraWords);
     request->send(200, "text/plain", message);
   });
 
