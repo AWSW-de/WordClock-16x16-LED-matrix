@@ -35,3 +35,5 @@ WordClock can be used in "Online Mode" with all the smart functions controlled v
 <img src="./Images/WordClock_web2.PNG">
 <img src="./Images/WordClock_web3.PNG">
 <img src="./Images/WordClock_web4.JPG">
+<img src="./Images/IMG_2836.png">
+
