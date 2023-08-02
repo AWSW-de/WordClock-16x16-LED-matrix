@@ -6,7 +6,7 @@
 // #
 // # Released under license: GNU General Public License v3.0: https://github.com/AWSW-de/WordClock-16x16-LED-matrix/blob/main/LICENSE
 // #
-// # Compatible with WordClock version: V2.1.0
+// # Compatible with WordClock version: V2.1.1
 // #
 // ###########################################################################################################################################
 /*
@@ -26,14 +26,13 @@
 
 // ###########################################################################################################################################
 // # Default language:
-// 
+//
 // 0 = German
 // 1 = English
 // 2 = Dutch
 // 3 = French
 //
 // Set your language layout here:
-// 
 // ###########################################################################################################################################
 int langLEDlayout_default = 0;
 
@@ -106,7 +105,8 @@ int blueVal_ew12_default = 0;    // Default ew12 color BLUE
 int useshowip_default = 1;       // Show the current ip at boot
 int useTelegram_default = 0;     // Use Telegram support
 int useTelegramID_default = 1;   // React to your own Telegram CHAT_ID only
-int maxWiFiconnctiontries = 50;  // Maximum connection tries to logon to the set WiFi. After the amount of tries is reached the WiFi settings will be deleted!
+int maxWiFiconnctiontries = 90;  // Maximum connection tries to logon to the set WiFi. After the amount of tries is reached the WiFi settings will be deleted!
+int maxTimeServerTries = 3;      // Maximum amount of tries to contact the time server until the device will restart to try again
 
 
 // ###########################################################################################################################################
@@ -238,15 +238,15 @@ int debugmode = 0;  // Debug messages output on serial monitor
 // # LED intensity setting:
 // ###########################################################################################################################################
 #define LEDintensityLIMIT 64  // off 255 max. !!! Do NOT change this if you don't know how much power drain this may cause to avoid damage !!!
-// Limit the intensity level to be able to select in the configuration to avoid to much power drain and to avoid hardware failures over time.
-// In case you want to use the device over longer times with a higher intensity or even higher, you will need to consider a much more
-// powerful power supply, a better cable to connect the device and you have to power the matrix directly to 5V of the power supply.
-// Otherwise the ESP32 can fail over time. Therefore this setting is limited and should not be raised. !!! You have been warned !!!
-// In case you really need a higher value, you need to make sure to power the matrix directly so that the power is not served over the ESP32
-// to the matrix to avoid its damage over time.
-// Please think about if you really need such a high intensity value. The WordClocks used from me run at a maximum intensity of 33 which is
-// really bright in my eyes and all levels above 64 i could not see really an advantage anymore that the display is better able to view...
-// !!! Make sure to use propper components !!!
+                              // Limit the intensity level to be able to select in the configuration to avoid to much power drain and to avoid hardware failures over time.
+                              // In case you want to use the device over longer times with a higher intensity or even higher, you will need to consider a much more
+                              // powerful power supply, a better cable to connect the device and you have to power the matrix directly to 5V of the power supply.
+                              // Otherwise the ESP32 can fail over time. Therefore this setting is limited and should not be raised. !!! You have been warned !!!
+                              // In case you really need a higher value, you need to make sure to power the matrix directly so that the power is not served over the ESP32
+                              // to the matrix to avoid its damage over time.
+                              // Please think about if you really need such a high intensity value. The WordClocks used from me run at a maximum intensity of 33 which is
+                              // really bright in my eyes and all levels above 64 i could not see really an advantage anymore that the display is better able to view...
+                              // !!! Make sure to use propper components !!!
 
 
 // ###########################################################################################################################################

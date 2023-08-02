@@ -58,7 +58,7 @@
 // ###########################################################################################################################################
 // # Version number of the code:
 // ###########################################################################################################################################
-const char* WORD_CLOCK_VERSION = "V2.1.0";
+const char* WORD_CLOCK_VERSION = "V2.1.1";
 
 
 // ###########################################################################################################################################
@@ -527,6 +527,9 @@ void setupWebInterface() {
 
     // Update URL
     ESPUI.label("Update URL", ControlColor::Dark, "http://" + IpAddress2String(WiFi.localIP()) + ":8080");
+
+    // AWSW software GitHub repository:
+    ESPUI.label("Download newer software updates here", ControlColor::Dark, "https://github.com/AWSW-de/WordClock-16x16-LED-matrix");
   }
 
 
@@ -1782,6 +1785,8 @@ void update_display() {
   // Reset ResetExtraWords at midnight:
   if ((iHour == 0) && (iMinute == 0) && (iSecond == 0) && (ResetExtraWords == true)) {
     ResetExtraWords = false;
+    getFlashValues();
+    updatenow = true;
     if (debugmode == 1) Serial.println("ResetExtraWords set to false again... Extra words will be displayed again...");
   }
 
@@ -2594,9 +2599,9 @@ void initTime(String timezone) {
     clear_display_background();
     strip.show();
     delay(250);
-    Serial.println("! Failed to obtain time - Time server could not be reached ! --> Try: " + String(TimeResetCounter) + " of 5...");
+    Serial.println("! Failed to obtain time - Time server could not be reached ! --> Try: " + String(TimeResetCounter) + " of " + String(maxTimeServerTries));
     TimeResetCounter = TimeResetCounter + 1;
-    if (TimeResetCounter == 6) {
+    if (TimeResetCounter == maxTimeServerTries + 1) {
       Serial.println("! Failed to obtain time - Time server could not be reached ! --> RESTART THE DEVICE NOW...");
       ESP.restart();
     }
@@ -3722,11 +3727,12 @@ void handleLEDupdate() {                                            // LED serve
   });
 
   ledserver.on("/resetew0", HTTP_GET, [](AsyncWebServerRequest* request) {  // Set all extra words outputs active again:
-    if (debugmode == 1) Serial.println("ResetExtraWords set to false... Extra words will be displayed again... WordClock will resetart now...");
-    String message = "Set all extra words outputs active again... WordClock will resetart now...";
+    if (debugmode == 1) Serial.println("ResetExtraWords set to false... Extra words will be displayed again...");
+    String message = "Set all extra words outputs active again...";
     request->send(200, "text/plain", message);
-    delay(2000);
-    RestartWordClock();
+    ResetExtraWords = false;
+    getFlashValues();
+    updatenow = true;
   });
 
   ledserver.on("/resetewstatus", HTTP_GET, [](AsyncWebServerRequest* request) {  // Status of the Extra Words reset switch:
