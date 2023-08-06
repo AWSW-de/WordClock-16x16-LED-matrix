@@ -4,7 +4,7 @@
 // #
 // # Code by https://github.com/AWSW-de
 // #
-// # Released under licenses: 
+// # Released under licenses:
 // # GNU General Public License v3.0: https://github.com/AWSW-de/WordClock-16x16-LED-matrix/blob/main/LICENSE and
 // # Creative Commons Attribution-NonCommercial 3.0 Unported License http://creativecommons.org/licenses/by-nc/3.0
 // # Important: NonCommercial — You may not use the material for commercial purposes !
@@ -61,7 +61,7 @@
 // ###########################################################################################################################################
 // # Version number of the code:
 // ###########################################################################################################################################
-const char* WORD_CLOCK_VERSION = "V2.1.1";
+const char* WORD_CLOCK_VERSION = "V2.1.2";
 
 
 // ###########################################################################################################################################
@@ -592,6 +592,15 @@ void setupWebInterface() {
   ESPUI.label("Usage hint 'Offline Mode'", ControlColor::Dark, "WordClock does not use your WiFi and it sets up an internal access point 'WordClock Offline Mode' you can connect to to control all functions that do not require your network. All smart functions will be disabled and you need to set the time manually after each startup, but you can use the time piece in environments without local WiFi.");
 
   ESPUI.label("General usage hint", ControlColor::Dark, "In case your browser does not open the WordClock configuration page automatically after connecting to the access point, please navigate to this URL manually: http://" + IpAddress2String(WiFi.softAPIP()));
+
+
+
+  // Section License:
+  // ####################
+  ESPUI.separator("License information:");
+
+  // License information:
+  ESPUI.label("License information", ControlColor::Dark, "NonCommercial — You may not use the project for commercial purposes!");
 
 
 
