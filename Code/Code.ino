@@ -4,7 +4,10 @@
 // #
 // # Code by https://github.com/AWSW-de
 // #
-// # Released under license: GNU General Public License v3.0: https://github.com/AWSW-de/WordClock-16x16-LED-matrix/blob/main/LICENSE
+// # Released under licenses: 
+// # GNU General Public License v3.0: https://github.com/AWSW-de/WordClock-16x16-LED-matrix/blob/main/LICENSE and
+// # Creative Commons Attribution-NonCommercial 3.0 Unported License http://creativecommons.org/licenses/by-nc/3.0
+// # Important: NonCommercial — You may not use the material for commercial purposes !
 // #
 // ###########################################################################################################################################
 /*
