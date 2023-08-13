@@ -61,7 +61,7 @@
 // ###########################################################################################################################################
 // # Version number of the code:
 // ###########################################################################################################################################
-const char* WORD_CLOCK_VERSION = "V2.1.2";
+const char* WORD_CLOCK_VERSION = "V2.1.3";
 
 
 // ###########################################################################################################################################
@@ -1794,28 +1794,6 @@ void switchSingleMinutes(Control* sender, int value) {
 // # Update the display / time on it:
 // ###########################################################################################################################################
 void update_display() {
-  // Reset ResetExtraWords at midnight:
-  if ((iHour == 0) && (iMinute == 0) && (iSecond == 0) && (ResetExtraWords == true)) {
-    ResetExtraWords = false;
-    getFlashValues();
-    updatenow = true;
-    if (debugmode == 1) Serial.println("ResetExtraWords set to false again... Extra words will be displayed again...");
-  }
-
-  // Test day/night times function:
-  // Serial.println("############################################################################################");
-  // for (int i = 0; i < 24; i++) {
-  //   String daynightvar = "-";
-  //   if ((i >= day_time_start) && (i <= day_time_stop)) {
-  //     daynightvar = "Day time";
-  //     if ((i == 0) && (day_time_stop == 23)) daynightvar = "Night time";
-  //   } else {
-  //     daynightvar = "Night time";
-  //   }
-  //   Serial.println("Current hour: " + String(i) + " day_time_start: " + String(day_time_start) + " day_time_stop: " + String(day_time_stop) + " --> " + daynightvar);
-  // }
-  // Serial.println("############################################################################################");
-
   if (testTime == 0) {  // Show the current time:
     show_time(iHour, iMinute);
   } else {  // TEST THE DISPLAY TIME OUTPUT:
@@ -1830,6 +1808,23 @@ void update_display() {
         delay(250);
       }
     }
+  }
+
+  // Test day/night times function:
+  if (testDayNight == 1) {
+    Serial.println("############################################################################################");
+    for (int i = 0; i < 24; i++) {
+      String daynightvar = "-";
+      if ((i >= day_time_start) && (i <= day_time_stop)) {
+        daynightvar = "Day time";
+        if ((i == 0) && (day_time_stop == 23)) daynightvar = "Night time";
+      } else {
+        daynightvar = "Night time";
+      }
+      Serial.println("Current hour: " + String(i) + " day_time_start: " + String(day_time_start) + " day_time_stop: " + String(day_time_stop) + " --> " + daynightvar);
+    }
+    testDayNight = 0;
+    Serial.println("############################################################################################");
   }
 }
 
@@ -1850,6 +1845,15 @@ void show_time(int hours, int minutes) {
   if (debugmode == 1) Serial.println("Update LED display now at: " + currentTime);
   lastHourSet = hours;
   lastMinutesSet = minutes;
+
+
+  // Reset ResetExtraWords at midnight:
+  if (((iHour == 0) && (iMinute == 0)) && (ResetExtraWords == true)) {
+    ResetExtraWords = false;
+    getFlashValues();
+    if (debugmode == 1) Serial.println("ResetExtraWords set to false again... Extra words will be displayed again...");
+  }
+
 
   // Set LED intensity:
   if ((usenightmode == 1) && (set_web_intensity == 0)) {
@@ -4456,9 +4460,9 @@ void WIFI_SETUP() {
           Serial.println("WiFi settings deleted because in " + String(maxWiFiconnctiontries) + " tries the WiFi connection could not be established. Temporary WordClock access point will be started to reconfigure WiFi again.");
           ESP.restart();
         }
-        delay(500);
+        delay(1000);
         SetWLAN(strip.Color(0, 0, 0));
-        delay(500);
+        delay(1000);
       }
       Serial.println(" ");
       WiFIsetup = true;

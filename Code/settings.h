@@ -4,12 +4,12 @@
 // #
 // # Code by https://github.com/AWSW-de
 // #
-// # Released under licenses: 
+// # Released under licenses:
 // # GNU General Public License v3.0: https://github.com/AWSW-de/WordClock-16x16-LED-matrix/blob/main/LICENSE and
 // # Creative Commons Attribution-NonCommercial 3.0 Unported License http://creativecommons.org/licenses/by-nc/3.0
 // # Important: NonCommercial — You may not use the material for commercial purposes !
 // #
-// # Compatible with WordClock version: V2.1.2
+// # Compatible with WordClock version: V2.1.3
 // #
 // ###########################################################################################################################################
 /*
@@ -29,13 +29,12 @@
 
 // ###########################################################################################################################################
 // # Default language:
-//
 // 0 = German
 // 1 = English
 // 2 = Dutch
 // 3 = French
 //
-// Set your language layout here:
+// Set your default language layout here:
 // ###########################################################################################################################################
 int langLEDlayout_default = 0;
 
@@ -233,22 +232,23 @@ ew9 - DATE text
 // ###########################################################################################################################################
 // # Test functions:
 // ###########################################################################################################################################
-int testTime = 0;   // LED text output test from 00:00 to 23:29 o'clock. Each minute is 1 second in the test
-int debugmode = 0;  // Debug messages output on serial monitor
+int testTime = 0;      // LED text output test from 00:00 to 23:29 o'clock. Each minute is 1 second in the test
+int testDayNight = 0;  // Test the day / night mode switching times
+int debugmode = 0;     // Debug messages output on serial monitor
 
 
 // ###########################################################################################################################################
 // # LED intensity setting:
 // ###########################################################################################################################################
-#define LEDintensityLIMIT 64  // off 255 max. !!! Do NOT change this if you don't know how much power drain this may cause to avoid damage !!!
-                              // Limit the intensity level to be able to select in the configuration to avoid to much power drain and to avoid hardware failures over time.
-                              // In case you want to use the device over longer times with a higher intensity or even higher, you will need to consider a much more
-                              // powerful power supply, a better cable to connect the device and you have to power the matrix directly to 5V of the power supply.
-                              // Otherwise the ESP32 can fail over time. Therefore this setting is limited and should not be raised. !!! You have been warned !!!
-                              // In case you really need a higher value, you need to make sure to power the matrix directly so that the power is not served over the ESP32
-                              // to the matrix to avoid its damage over time.
-                              // Please think about if you really need such a high intensity value. The WordClocks used from me run at a maximum intensity of 33 which is
-                              // really bright in my eyes and all levels above 64 i could not see really an advantage anymore that the display is better able to view...
+#define LEDintensityLIMIT 64  // off 255 max. !!! Do NOT change this if you don't know how much power drain this may cause to avoid damage !!! \
+                              // Limit the intensity level to be able to select in the configuration to avoid to much power drain and to avoid hardware failures over time. \
+                              // In case you want to use the device over longer times with a higher intensity or even higher, you will need to consider a much more \
+                              // powerful power supply, a better cable to connect the device and you have to power the matrix directly to 5V of the power supply. \
+                              // Otherwise the ESP32 can fail over time. Therefore this setting is limited and should not be raised. !!! You have been warned !!! \
+                              // In case you really need a higher value, you need to make sure to power the matrix directly so that the power is not served over the ESP32 \
+                              // to the matrix to avoid its damage over time. \
+                              // Please think about if you really need such a high intensity value. The WordClocks used from me run at a maximum intensity of 33 which is \
+                              // really bright in my eyes and all levels above 64 i could not see really an advantage anymore that the display is better able to view... \
                               // !!! Make sure to use propper components !!!
 
 
