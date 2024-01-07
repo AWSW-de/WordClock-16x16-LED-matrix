@@ -26,7 +26,7 @@ Setup video instructions available for <a href="https://www.youtube.com/watch?v=
 
 [![AWSW WordClock WiFi setup](http://img.youtube.com/vi/RMOl2nNKyl0/0.jpg)](http://www.youtube.com/watch?v=RMOl2nNKyl0 "AWSW WordClock WiFi setup")
 
-The project was also schon on the "Conrad TechnikHelden" channel:  =)
+The project was also shown on the "Conrad TechnikHelden" channel: Thanks guys for the nice video! =)
 
 [![DIY Word Clock bauen | Conrad TechnikHelden](http://img.youtube.com/vi/djyEdhgWDTk/0.jpg)](http://www.youtube.com/watch?v=djyEdhgWDTk "DIY Word Clock bauen | Conrad TechnikHelden")
 
