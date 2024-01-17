@@ -48,7 +48,7 @@ The project was also shown on the "Conrad TechnikHelden" channel: Thanks guys fo
 
 
 
-**Pictures of the “Offline Mode” of V3.0.0:**
+**Pictures of the “Offline Mode” of V3.2.0:**
 <img src="./Images/IMG_0243.jpg">
 <img src="./Images/IMG_0244.jpg">
 
