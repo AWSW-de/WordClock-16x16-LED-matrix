@@ -2,7 +2,8 @@
 
 WordClock 16x16 LED matrix, super easy build, 3 wires to solder only. Telegram, smart home and ext. events integration
 
-Code for the <a href="https://www.printables.com/de/model/331012-wordclock-16x16-led-matrix">WordClock 16x16 LED matrix</a> 3D print on <a href="https://www.printables.com">www.printables.com</a>
+Code for the <a href="https://www.printables.com/de/search/models?q=WordClock%2016x16%20@awsw&ctx=models">WordClock 16x16 LED matrix projects</a> as 3D print on <a href="https://www.printables.com">www.printables.com</a>
+
 
 WordClock can be used in "Online Mode" with all the smart functions controlled via your network environment and otional via Telegram and also in "Offline Mode" where you can use the time piece function only without the need of a local WiFi. In both operation modes you can configure the device via the shown internal web portal.
 
