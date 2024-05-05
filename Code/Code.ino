@@ -61,7 +61,7 @@
 // ###########################################################################################################################################
 // # Version number of the code:
 // ###########################################################################################################################################
-const char* WORD_CLOCK_VERSION = "V3.2.0";
+const char* WORD_CLOCK_VERSION = "V3.7.0";
 
 
 // ###########################################################################################################################################
@@ -103,6 +103,14 @@ String BOTtoken = "XXXXXXXXXX:YYYYYYYYYYYYYYY-ZZZZZZZZZZZZZZZZZZZZ";
 String CHAT_ID = "1234512345";
 String chat_id = CHAT_ID;
 uint16_t TelegramSwitcher, TelegramSwitcherID, text_colour_background, text_colour_time, selectLang, timeId;
+// WiFi REconnect function:
+unsigned long WiFi_currentMillis = 0;
+unsigned long WiFi_previousMillis = 0;
+unsigned long WiFi_interval = 60000;
+int WiFi_retry_counter = 0;
+int useWiFiReCon, WiFiReConHint;
+int WiFi_FlashLEDs = 10;
+int WiFi_Restart = 30;
 
 
 // ###########################################################################################################################################
@@ -152,8 +160,18 @@ void setup() {
 // # Loop function which runs all the time after the startup was done:
 // ###########################################################################################################################################
 void loop() {
-  if (UseOnlineMode == 1) {                             // Offline Mode actions:
-    if ((WiFIsetup == true) || (testTime == 1)) {       // WiFi mode or test time actions:
+  if (UseOnlineMode == 1) {                        // Offline Mode actions:
+    if ((WiFIsetup == true) || (testTime == 1)) {  // WiFi mode or test time actions:
+      WiFi_currentMillis = millis();
+      if ((useWiFiReCon == true) && (WiFIsetup == true) && (WiFi.status() != WL_CONNECTED) && (WiFi_currentMillis - WiFi_previousMillis >= WiFi_interval)) {  // Device offline during runtime? > Reconnect now!
+        WiFi_Lost();
+      }
+      if ((useWiFiReCon == true) && (WiFIsetup == true) && (WiFi.status() == WL_CONNECTED) && (WiFi_retry_counter >= 1)) {  // Device was offline during runtime? > Reconnect was successfull!
+        Serial.println("Reconnecting to WiFi = SUCCESS");
+        WiFi_retry_counter = 0;
+        updatedevice = true;
+        updatenow = true;
+      }
       printLocalTime();                                 // Get the current time
       if (updatedevice == true) {                       // Allow display updates (normal usage)
         if (millis() - bot_lasttime > BOT_MTBS) {       // Update only after timeout
@@ -521,6 +539,24 @@ void setupWebInterface() {
 
     // WiFi Gateway address:
     ESPUI.label("Gateway address", ControlColor::Dark, IpAddress2String(WiFi.gatewayIP()));
+
+    // Maximum retries to reach the configured WiFi:
+    ESPUI.label("Max. tries on startup until the WiFi config is reset", ControlColor::Dark, String(maxWiFiconnctiontries));
+  }
+
+
+
+  // Section WiFi reconnect:
+  // #######################
+  if (UseOnlineMode == 1) {
+    ESPUI.separator("Active WiFi reconnect during runtime:");
+
+    // Use WIFi reconnect function during runtime:
+    ESPUI.switcher("Use active WIFi reconnect function during runtime", &switchWiFiReConnect, ControlColor::Dark, useWiFiReCon);
+
+    // Notes about active WiFi reconnect:
+    WiFiReConHint = ESPUI.label("Notes about active WiFi reconnect", ControlColor::Dark, "WordClock will check its connection to your WiFi every " + String(WiFi_interval / 1000) + " seconds (" + String((WiFi_interval / 1000) / 60) + " minute(s)). If the WiFi cannot be reached anymore it will continue to work offline for " + String((WiFi_interval / 1000) * WiFi_FlashLEDs) + " seconds (" + String(((WiFi_interval / 1000) * WiFi_FlashLEDs) / 60) + " minutes), but will flash the WiFi LEDs in blue, yellow and red then. If after " + String((WiFi_interval / 1000) * WiFi_Restart) + " seconds (" + String(((WiFi_interval / 1000) * WiFi_Restart) / 60) + " minutes) the WiFi can still not be reconnected, WordClock will reboot automatically to solve the connection problem. In case the WiFi then still not is able to reach for " + String(maxWiFiconnctiontries) + " tries, the configuration will be set to default. It is expected then, that the WiFi will not be available anymore, e.g. due to a change of your router, etc...");
+    ESPUI.setPanelStyle(WiFiReConHint, "width: 60%;");
   }
 
 
@@ -791,6 +827,7 @@ void getFlashValues() {
   CHAT_ID = preferences.getString("iChatID", "");
   showTeleData = preferences.getUInt("showTeleData", showTeleData_default);
   bot.updateToken(String(BOTtoken));
+  useWiFiReCon = preferences.getUInt("useWiFiReCon", useWiFiReCon_default);
   if (debugtexts == 1) Serial.println("Read settings from flash: END");
 }
 
@@ -873,6 +910,7 @@ void setFlashValues() {
   preferences.putUInt("ew10", ew10);
   preferences.putUInt("ew11", ew11);
   preferences.putUInt("ew12", ew12);
+  preferences.putUInt("useWiFiReCon", useWiFiReCon);
   if (debugtexts == 1) Serial.println("Write settings to flash: END");
   checkforNightMode();
   updatenow = true;  // Update display now...
@@ -968,6 +1006,7 @@ void buttonWordClockReset(Control* sender, int type, void* param) {
   preferences.putUInt("ew10", 0);
   preferences.putUInt("ew11", 0);
   preferences.putUInt("ew12", 0);
+  preferences.putUInt("useWiFiReCon", useWiFiReCon_default);
   delay(1000);
   preferences.end();
   Serial.println("####################################################################################################");
@@ -1718,6 +1757,25 @@ void switchShowIP(Control* sender, int value) {
       break;
     case S_INACTIVE:
       useshowip = 0;
+      break;
+  }
+  changedvalues = true;
+  updatedevice = true;
+}
+
+
+// ###########################################################################################################################################
+// # GUI: Use WIFi reconnect function during runtime:
+// ###########################################################################################################################################
+void switchWiFiReConnect(Control* sender, int value) {
+  updatedevice = false;
+  delay(1000);
+  switch (value) {
+    case S_ACTIVE:
+      useWiFiReCon = 1;
+      break;
+    case S_INACTIVE:
+      useWiFiReCon = 0;
       break;
   }
   changedvalues = true;
@@ -3303,7 +3361,7 @@ void handleNewMessages(int numNewMessages) {
     // You will be motified in case an unknown sender id tries to control the WordClock if the notification is set active.
     if (useTelegramID == 1) {
       if (String(CHAT_ID) != chat_id) {
-      // if (String("123") != chat_id) {  // TEST WITH UNKNOWN OWN FAKE ID 123
+        // if (String("123") != chat_id) {  // TEST WITH UNKNOWN OWN FAKE ID 123
         Serial.println(String("Message received from unknown user: " + chat_id + " with text: " + text + " ==> Your WordClock will not react to this message"));
         if (TeleNoteUnknown == 1) bot.sendMessage(CHAT_ID, "Message received from unknown Telegram user: " + chat_id + "\xE2\x9D\x97\nMessage text: " + text + "\nYour WordClock will not react to this message " + "\xF0\x9F\x98\x8F");
         break;
@@ -4153,20 +4211,264 @@ void SetWLAN(uint32_t color) {
 
 
 // ###########################################################################################################################################
+// # Captive Portal web page to setup the device by AWSW:
+// ###########################################################################################################################################
+const char index_html[] PROGMEM = R"rawliteral(
+  <!DOCTYPE html>
+  <html>
+  <head>
+    <title>WordClock Setup</title>
+    <style>
+      body {
+        padding: 25px;
+        font-size: 18px;
+        background-color: #000;
+        color: #fff;
+        font-family: Arial, sans-serif;
+      }
+      h1, p { 
+        text-align: center; 
+        margin-bottom: 20px;
+      }
+      input, select { 
+        font-size: 18px; 
+        min-width: 150px;
+      }
+      button {
+        display: inline-block;
+        padding: 15px 25px;
+        margin-top: 15px;
+        font-size: 18px;
+        cursor: pointer;
+        text-align: center;
+        text-decoration: none;
+        outline: none;
+        color: #fff;
+        background-color: #4CAF50;
+        border: none;
+        border-radius: 15px;
+        box-shadow: 0 9px #999;
+      }
+      button:hover {
+        background-color: #3e8e41;
+      }
+      button:active {
+        background-color: #3e8e41;
+        box-shadow: 0 5px #666;
+        transform: translateY(4px);
+      }
+    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script type="text/javascript">
+      function disableButtonAndSubmit() {
+        var btn = document.getElementById("submitButton");
+        btn.disabled = true;
+        setTimeout(function() {
+          document.forms["myForm"].submit();
+        }, 100);
+      }
+    </script>
+  </head>
+  <body>
+    <form action="/start" name="myForm">
+      <center>
+        <h1>Welcome to the WordClock setup</h1>
+        <p>Please add your local WiFi credentials and set your language on the next page</p>
+        <p><button id="submitButton" type="submit" onclick="disableButtonAndSubmit()">Configure WordClock</button></p>
+      </center>
+    </form>
+  </body>
+  </html>
+)rawliteral";
+
+
+// ###########################################################################################################################################
+// # Captive Portal web page to setup the device by AWSW:
+// ###########################################################################################################################################
+const char config_html[] PROGMEM = R"rawliteral(
+  <!DOCTYPE HTML>
+  <html>
+  <head>
+    <title>WordClock Setup</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script language="JavaScript">
+      function updateSSIDInput() {
+        var ssidSelect = document.getElementById("mySSIDSelect");
+        if (ssidSelect && ssidSelect.options.length > 0) {
+          document.getElementById("mySSID").value = ssidSelect.options[ssidSelect.selectedIndex].value;
+        }
+      }
+       function validateForm() {
+        var errorParagraph = document.querySelector('.error');
+        errorParagraph.style.display = 'none';
+        errorParagraph.innerHTML = '';
+        if (document.forms["myForm"]["mySSID"].value == "") {
+          errorParagraph.innerHTML = "WiFi SSID must be set. ";
+          errorParagraph.style.display = 'block';
+          return false;
+        }
+        if (document.forms["myForm"]["myPW"].value == "") {
+          errorParagraph.innerHTML = "WiFi password must be set. ";
+          errorParagraph.style.display = 'block'; 
+          return false;
+        }
+        if (document.forms["myForm"]["setlanguage"].value == "99") {
+          errorParagraph.innerHTML = "Language layout must be set. ";
+          errorParagraph.style.display = 'block'; 
+          return false;
+        }
+        return true;
+      }
+      function disableButtonAndSubmit() {
+        if (validateForm()) {
+          var btn = document.getElementById("submitButton");
+          btn.innerText = 'Restarting WordClock...';
+          btn.disabled = true;
+          setTimeout(function() {
+            document.forms["myForm"].submit();
+          }, 1000);
+        }
+      }
+      window.onload = function() {
+        var ssidSelect = document.getElementById("mySSIDSelect");
+        if (ssidSelect) {
+          ssidSelect.addEventListener('change', updateSSIDInput);
+        }
+      };
+    </script>
+    <style>
+      body {
+        padding: 25px;
+        font-size: 18px;
+        background-color: #000;
+        color: #fff;
+        font-family: Arial, sans-serif;
+      }
+      h1, p { 
+        text-align: center; 
+        margin-bottom: 20px;
+      }
+      p.error { 
+        color: #ff0000; 
+        display: none;
+      }
+      input, select { 
+        font-size: 18px; 
+        min-width: 150px;
+      }
+      button {
+        display: inline-block;
+        padding: 15px 25px;
+        margin-top: 15px;
+        font-size: 18px;
+        cursor: pointer;
+        text-align: center;
+        text-decoration: none;
+        outline: none;
+        color: #fff;
+        background-color: #4CAF50;
+        border: none;
+        border-radius: 15px;
+        box-shadow: 0 9px #999;
+      }
+      button:hover { background-color: #3e8e41 }
+      button:active {
+        background-color: #3e8e41;
+        box-shadow: 0 5px #666;
+        transform: translateY(4px);
+      }
+    </style>
+  </head>
+  <body>
+    <form action="/get" name="myForm" onsubmit="return validateForm()">
+      <h1>Initial WordClock setup:</h1>
+      <!-- Select element will be dynamically added here -->
+      <p>
+        <label for="mySSID">Enter your WiFi SSID:</label><br />
+        <input id="mySSID" name="mySSID" value="" />
+      </p>
+      <p>
+        <label for="myPW">Enter your WiFi password:</label><br/>
+        <input type="text" id="myPW" name="myPW" value="" />
+      </p>
+      <p>
+        <label for="setlanguage">Select your language layout:</label><br/>
+        <select id="setlanguage" name="setlanguage">
+          <option value="99" disabled selected>Choose...</option>
+          <option value="0">GERMAN</option>
+          <option value="1">ENGLISH</option>
+          <option value="2">DUTCH</option>
+          <option value="3">FRENCH</option>
+        </select>
+
+    <br/><br/>
+    <label for="myBotToken">Enter your Telegram bot token: (Check settings.h how to get your own one)</label><br/>
+    <input type="text" id="myBotToken" name="myBotToken" value="XXXXXXXXXX:YYYYYYYYYYYYYYY-ZZZZZZZZZZZZZZZZZZZZ" style="width: 400px;" /><br/><br/>
+    <label for="myChatID">Enter your Telegram chat id: (Check settings.h how to get your own one)</label><br/>
+    <input type="text" id="myChatID" name="myChatID" value="1234512345" style="width: 200px;" /><br/><br/>
+
+      </p>
+      <p class="error">Errors will be displayed here!</p>
+      <p>
+        <button id="submitButton" onclick="disableButtonAndSubmit()">Save values</button>
+      </p>
+    </form>
+  </body>
+  </html>
+)rawliteral";
+
+
+// ###########################################################################################################################################
+// # Captive Portal web page to setup the device by AWSW:
+// ###########################################################################################################################################
+const char saved_html[] PROGMEM = R"rawliteral(
+  <!DOCTYPE HTML>
+  <html>
+  <head>
+    <title>WordClock Setup</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+      body {
+        padding: 25px;
+        font-size: 18px;
+        background-color: #000;
+        color: #fff;
+        font-family: Arial, sans-serif;
+      }
+      h1, p { 
+        text-align: center; 
+        margin-bottom: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Settings saved!</h1>
+    <p>WordClock is now trying to connect to the selected WiFi and display the chosen language.</p>
+    <p>First the WiFi leds will be lit blue and change to green in case of a successful WiFi connection.</p>
+    <p>If the connection fails the WiFi leds will flash red. Then please reconnect to the temporary access point again.</p>
+    <p>Please close this page now, rejoin your selected WiFi and enjoy your WordClock. =)</p>
+  </body>
+  </html>
+)rawliteral";
+
+
+// ###########################################################################################################################################
 // # Wifi scan function to help you to setup your WiFi connection
 // ###########################################################################################################################################
-void ScanWiFi() {
+String ScanWiFi() {
+  String html = config_html;
   Serial.println("Scan WiFi networks - START");
   int n = WiFi.scanNetworks();
   Serial.println("WiFi scan done");
+  Serial.println("Scan WiFi networks - END");
   Serial.println(" ");
-  if (n == 0) {
-    Serial.println("No WiFi networks found");
-  } else {
+  if (n > 0) {
     Serial.print(n);
     Serial.println(" WiFi networks found:");
     Serial.println(" ");
+    String ssidList = "<p><label for=\"mySSISelect\">Found these networks:</label><br /><select id=\"mySSIDSelect\" name=\"mySSIDSelect\"><option value=\"\" disabled selected>Choose...</option>";
     for (int i = 0; i < n; ++i) {
+      ssidList += "<option value=\"" + WiFi.SSID(i) + "\">" + WiFi.SSID(i) + "</option>";
       // Print SSID and RSSI for each network found
       Serial.print(i + 1);
       Serial.print(": ");
@@ -4174,178 +4476,15 @@ void ScanWiFi() {
       Serial.print(" (");
       Serial.print(WiFi.RSSI(i));
       Serial.print(")");
-      Serial.println((WiFi.encryptionType(i) == WIFI_AUTH_OPEN) ? " " : "*");
-      delay(10);
+      Serial.println((WiFi.encryptionType(i) == WIFI_AUTH_OPEN) ? "" : "*");
     }
+    ssidList += "</select></p>";
+    html.replace("<!-- Select element will be dynamically added here -->", ssidList);
+  } else {
+    Serial.println("No WiFi networks found");
   }
-  Serial.println("Scan WiFi networks - END");
+  return html;
 }
-
-
-// ###########################################################################################################################################
-// # Captive Portal web page to setup the device by AWSW:
-// ###########################################################################################################################################
-const char index_html[] PROGMEM = R"=====(
-  <!DOCTYPE html><html><head><title>WordClock</title></head>
-          <style>
-      body {
-      padding: 25px;
-      font-size: 25px;
-      background-color: black;
-      color: white;
-      }
-      </style>
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  
-   <style>
-    .button {
-      display: inline-block;
-      padding: 15px 25px;
-      font-size: 24px;
-      cursor: pointer;
-      text-align: center;
-      text-decoration: none;
-      outline: none;
-      color: #fff;
-      background-color: #4CAF50;
-      border: none;
-      border-radius: 15px;
-      box-shadow: 0 9px #999;
-    }
-    .button:hover {background-color: #3e8e41}
-    .button:active {
-      background-color: #3e8e41;
-      box-shadow: 0 5px #666;
-      transform: translateY(4px);
-    }
-    </style>
-  
-  <body>
-    <form action="/start" name="myForm">
-      <center><b><h1>Welcome to the WordClock setup</h1></b>
-      <h2>Please add your local WiFi credentials<br/><br/>and other settings on the next page</h2><br/>
-      <input type="submit" value="Configure WordClock" class="button">
-     </center></form></body>
-  </html>
- )=====";
-
-
-// ###########################################################################################################################################
-// # Captive Portal web page to setup the device by AWSW:
-// ###########################################################################################################################################
-const char config_html[] PROGMEM = R"rawliteral(
- <!DOCTYPE HTML><html><head><title>WordClock</title>
- <meta name="viewport" content="width=device-width, initial-scale=1">
-  <script language="JavaScript">
-  <!--
-  function validateForm() {
-  var x = document.forms["myForm"]["mySSID"].value;
-  if (x == "") {
-    alert("WiFi SSID must be set");
-    return false;
-  }
-  var y = document.forms["myForm"]["myPW"].value;
-  if (y == "") {
-    alert("WiFi password must be set");
-    return false;
-  }
-  var y = document.forms["myForm"]["myBotToken"].value;
-  if (y == "") {
-    alert("Telegram bot token must be set");
-    return false;
-  }
-  var y = document.forms["myForm"]["myChatID"].value;
-  if (y == "") {
-    alert("Telegram chat id must be set");
-    return false;
-  }
-  var x = document.forms["myForm"]["setlanguage"].value;
-  if (x == "99") {
-    alert("Language layout must be set");
-    return false;
-  }
-  } 
-  //-->
-  </script>
-  </head>
-  
-   <style>
-      body {
-      padding: 25px;
-      font-size: 25px;
-      background-color: black;
-      color: white;
-      }
-      </style>
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  
-   <style>
-    .button {
-      display: inline-block;
-      padding: 15px 25px;
-      font-size: 24px;
-      cursor: pointer;
-      text-align: center;
-      text-decoration: none;
-      outline: none;
-      color: #fff;
-      background-color: #4CAF50;
-      border: none;
-      border-radius: 15px;
-      box-shadow: 0 9px #999;
-    }
-    .button:hover {background-color: #3e8e41}
-    .button:active {
-      background-color: #3e8e41;
-      box-shadow: 0 5px #666;
-      transform: translateY(4px);
-    }
-    </style>
-  
-  <body>
-  <form action="/get" name="myForm" onsubmit="return validateForm()" >
-    <center><b><h1>Initial WordClock setup:</h1></b>
-    <label for="mySSID">Enter your WiFi SSID:</label><br/>
-    <input type="text" id="mySSID" name="mySSID" value="" style="width: 200px;" /><br/><br/>
-    <label for="myPW">Enter your WiFi password:</label><br/>
-    <input type="text" id="myPW" name="myPW" value="" style="width: 200px;" /><br/><br/>
-    <label for="setlanguage">Select your language layout:</label><br/>
-    <select id="setlanguage" name="setlanguage" style="width: 200px;">
-    <option value=99 selected>Select your language</option>
-    <option value=0>GERMAN</option>
-    <option value=1>ENGLISH</option>
-    <option value=2>DUTCH</option>
-    <option value=3>FRENCH</option>
-    </select><br/><br/>
-    <label for="myBotToken">Enter your Telegram bot token: (Check settings.h how to get your own one)</label><br/>
-    <input type="text" id="myBotToken" name="myBotToken" value="XXXXXXXXXX:YYYYYYYYYYYYYYY-ZZZZZZZZZZZZZZZZZZZZ" style="width: 400px;" /><br/><br/>
-    <label for="myChatID">Enter your Telegram chat id: (Check settings.h how to get your own one)</label><br/>
-    <input type="text" id="myChatID" name="myChatID" value="1234512345" style="width: 200px;" /><br/><br/>
-    <input type="submit" value="Save values and start WordClock" class="button">
-  </center></form></body></html>)rawliteral";
-
-
-// ###########################################################################################################################################
-// # Captive Portal web page to setup the device by AWSW:
-// ###########################################################################################################################################
-const char saved_html[] PROGMEM = R"rawliteral(
- <!DOCTYPE HTML><html><head>
-  <title>Initial WordClock setup</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1"></head>
-    <style>
-  body {
-      padding: 25px;
-      font-size: 25px;
-      background-color: black;
-      color: white;
-    }
-  </style>
-  <body>
-    <center><h2><b>Settings saved...<br><br>
-    WordClock will now try to connect to the named WiFi with the set language.<br><br>
-    If it failes the WIFI leds will flash red and then please try to connect to the temporary access point again.<br><br>
-    Please close this page now and enjoy your WordClock. =)</h2></b>
- </body></html>)rawliteral";
 
 
 // ###########################################################################################################################################
@@ -4358,7 +4497,7 @@ const char* PARAM_INPUT_4 = "myBotToken";
 const char* PARAM_INPUT_5 = "myChatID";
 const String captiveportalURL = "http://192.168.4.1";
 void CaptivePotalSetup() {
-  ScanWiFi();
+  String htmlConfigContent = ScanWiFi();
   const char* temp_ssid = "WordClock";
   const char* temp_password = "";
   WiFi.softAP(temp_ssid, temp_password);
@@ -4422,8 +4561,8 @@ void CaptivePotalSetup() {
     ESP.restart();
   });
 
-  server.on("/start", HTTP_GET, [](AsyncWebServerRequest* request) {
-    request->send_P(200, "text/html", config_html);
+  server.on("/start", HTTP_GET, [htmlConfigContent](AsyncWebServerRequest* request) {
+    request->send_P(200, "text/html", htmlConfigContent.c_str());
   });
 
   server.on("/connecttest.txt", [](AsyncWebServerRequest* request) {
@@ -4503,33 +4642,27 @@ void WIFI_SETUP() {
     String WIFIssid = preferences.getString("WIFIssid");
     bool WiFiConfigEmpty = false;
     if (WIFIssid == "") {
-      // if (debugtexts == 1) Serial.println("WIFIssid empty");
       WiFiConfigEmpty = true;
-    } else {
-      // if (debugtexts == 1) Serial.print("WIFIssid = ");
-      // if (debugtexts == 1) Serial.println(WIFIssid);
     }
     String WIFIpass = preferences.getString("WIFIpass");
     if (WIFIpass == "") {
-      // if (debugtexts == 1) Serial.println("WIFIpass empty");
       WiFiConfigEmpty = true;
-    } else {
-      // if (debugtexts == 1) Serial.print("WIFIpass = ");
-      // if (debugtexts == 1) Serial.println(WIFIpass);
     }
     if (WiFiConfigEmpty == true) {
       Serial.println("Show SET WIFI...");
       uint32_t c = strip.Color(0, 255, 255);
-      int TextWait = 500;
-      showtext('S', TextWait, c);
-      showtext('E', TextWait, c);
-      showtext('T', TextWait, c);
-      showtext(' ', TextWait, c);
-      showtext('W', TextWait, c);
-      showtext('I', TextWait, c);
-      showtext('F', TextWait, c);
-      showtext('I', TextWait, c);
-      showtext(' ', TextWait, c);
+      for (int i = 0; i < 3; i++) {
+        int TextWait = 500;
+        showtext('S', TextWait, c);
+        showtext('E', TextWait, c);
+        showtext('T', TextWait, c);
+        showtext(' ', TextWait, c);
+        showtext('W', TextWait, c);
+        showtext('I', TextWait, c);
+        showtext('F', TextWait, c);
+        showtext('I', TextWait, c);
+        showtext(' ', TextWait, c);
+      }
       CaptivePotalSetup();
       SetWLAN(strip.Color(0, 255, 255));
     } else {
@@ -5216,6 +5349,51 @@ void showtext(char letter, int wait, uint32_t c) {
   }
   strip.show();
   delay(wait);
+}
+
+
+// ###########################################################################################################################################
+// # // WordClock is offline during runtime! --> Restart and reconnect now!
+// ###########################################################################################################################################
+void WiFi_Lost() {
+  Serial.print("WordClock is offline during runtime! ");
+  Serial.print(millis());
+  Serial.print(" - Reconnecting to WiFi... ");
+  WiFi.disconnect();
+  WiFi.reconnect();
+  WiFi_previousMillis = WiFi_currentMillis;
+  WiFi_retry_counter = WiFi_retry_counter + 1;
+  Serial.print(" Retry count: " + String(WiFi_retry_counter));
+
+  // delay(1000);
+
+  if ((WiFi.status() != WL_CONNECTED)) {
+    Serial.println(" - Reconnecting to WiFi = FAILED - Next try in " + String(WiFi_interval / 1000) + " seconds...");
+  }
+
+  if (WiFi_retry_counter >= WiFi_FlashLEDs) {
+    Serial.println("WordClock is offline during runtime for 10+ tries! --> Flash LEDs 3x now!");
+    for (int i = 0; i < 3; i++) {
+      updatedevice = false;
+      SetWLAN(strip.Color(0, 0, 255));
+      delay(1000);
+      SetWLAN(strip.Color(255, 255, 0));
+      delay(1000);
+      SetWLAN(strip.Color(255, 0, 0));
+      delay(1000);
+    }
+  }
+
+  if (WiFi_retry_counter >= WiFi_Restart) {
+    Serial.println("WordClock is offline during runtime for 30 tries! --> Restart and reconnect now!");
+    updatedevice = false;
+    delay(250);
+    ResetTextLEDs(strip.Color(0, 255, 0));
+    if (changedvalues == true) setFlashValues();  // Write settings to flash
+    preferences.end();
+    delay(1000);
+    ESP.restart();
+  }
 }
 
 

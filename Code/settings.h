@@ -9,7 +9,7 @@
 // # Creative Commons Attribution-NonCommercial 3.0 Unported License http://creativecommons.org/licenses/by-nc/3.0
 // # Important: NonCommercial — You may not use the material for commercial purposes !
 // #
-// # Compatible with WordClock version: V3.2.0
+// # Compatible with WordClock version: V3.7.0
 // #
 // ###########################################################################################################################################
 /*
@@ -57,9 +57,10 @@ int useTelegram_default = 0;      // Use Telegram support
 int useTelegramID_default = 1;    // React to your own Telegram CHAT_ID only
 int showTeleData_default = 0;     // Show your own Telegram bot token and chat id on the configuration page directly visible
 int TeleNoteUnknown_default = 1;  // Send notifications about messages from unknown users
-int maxWiFiconnctiontries = 30;   // Maximum connection tries to logon to the set WiFi. After the amount of tries is reached the WiFi settings will be deleted!
+int maxWiFiconnctiontries = 100;  // Maximum connection tries to logon to the set WiFi. After the amount of tries is reached the WiFi settings will be deleted!
 int iHourOffset_default = 1;      // Offset of hours in Offline Mode
 int useStartupText_default = 1;   // Show the "WordClock" text at boot
+int useWiFiReCon_default = 1;     // Use the WiFi reconnect function during runtime
 
 
 // ###########################################################################################################################################
