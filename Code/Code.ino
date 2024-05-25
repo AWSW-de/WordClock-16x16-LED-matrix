@@ -61,7 +61,7 @@
 // ###########################################################################################################################################
 // # Version number of the code:
 // ###########################################################################################################################################
-const char* WORD_CLOCK_VERSION = "V3.7.0";
+const char* WORD_CLOCK_VERSION = "V3.8.0";
 
 
 // ###########################################################################################################################################
@@ -419,6 +419,18 @@ void setupWebInterface() {
       ewtext9 = "9: DATE";
     }
 
+    // ################################################################## IT:
+    if (langLEDlayout == 4) {  // IT:
+      ewtext1 = "1: VIENI QUI";
+      ewtext2 = "2: ORA DI PRANZO";
+      ewtext3 = "3: ALLARME";
+      ewtext4 = "4: VACANZA";
+      ewtext5 = "5: TEMPERATURA";
+      ewtext6 = "6: DATA";
+      ewtext7 = "7: COMPLEANNO";
+      ewtext8 = "8: CAMPANELLO";
+    }
+
     // Get the selected colors for the extra words 1 to 12:
 
     // Color Extra Word ew1:
@@ -477,12 +489,14 @@ void setupWebInterface() {
     text_colour_ew8 = ESPUI.text(ewtext8.c_str(), colCallew, ControlColor::Dark, hex_ew8, (void*)8);
     ESPUI.setInputType(text_colour_ew8, "color");
 
-    // Color Extra Word ew9:
-    char hex_ew9[7] = { 0 };
-    sprintf(hex_ew9, "#%02X%02X%02X", redVal_ew9, greenVal_ew9, blueVal_ew9);
-    uint16_t text_colour_ew9;
-    text_colour_ew9 = ESPUI.text(ewtext9.c_str(), colCallew, ControlColor::Dark, hex_ew9, (void*)9);
-    ESPUI.setInputType(text_colour_ew9, "color");
+    if (langLEDlayout != 4) {  // IT has 8 extra words only:
+      // Color Extra Word ew9:
+      char hex_ew9[7] = { 0 };
+      sprintf(hex_ew9, "#%02X%02X%02X", redVal_ew9, greenVal_ew9, blueVal_ew9);
+      uint16_t text_colour_ew9;
+      text_colour_ew9 = ESPUI.text(ewtext9.c_str(), colCallew, ControlColor::Dark, hex_ew9, (void*)9);
+      ESPUI.setInputType(text_colour_ew9, "color");
+    }
 
     if (langLEDlayout == 0) {  // DE has 12 extra words only:
       // Color Extra Word ew10:
@@ -696,6 +710,7 @@ void setupWebInterface() {
   if (langLEDlayout == 1) selectLangTXT = "English";
   if (langLEDlayout == 2) selectLangTXT = "Dutch";
   if (langLEDlayout == 3) selectLangTXT = "French";
+  if (langLEDlayout == 4) selectLangTXT = "Italian (2024 models only)";
   Serial.print("Selected language: ");
   Serial.println(selectLangTXT);
 
@@ -705,6 +720,7 @@ void setupWebInterface() {
   ESPUI.addControl(ControlType::Option, "English", "1", ControlColor::Alizarin, selectLang);
   ESPUI.addControl(ControlType::Option, "Dutch", "2", ControlColor::Alizarin, selectLang);
   ESPUI.addControl(ControlType::Option, "French", "3", ControlColor::Alizarin, selectLang);
+  ESPUI.addControl(ControlType::Option, "Italian (2024 models only)", "4", ControlColor::Alizarin, selectLang);
 
   // Current language:
   statusLanguageID = ESPUI.label("Current layout language", ControlColor::Dark, selectLangTXT);
@@ -1031,6 +1047,7 @@ void call_langauge_select(Control* sender, int type) {
   if (langLEDlayout == 1) selectLangTXT = "English";
   if (langLEDlayout == 2) selectLangTXT = "Dutch";
   if (langLEDlayout == 3) selectLangTXT = "French";
+  if (langLEDlayout == 4) selectLangTXT = "Italian (2024 models only)";
   if (debugtexts == 1) {
     Serial.print("Selected language ID: ");
     Serial.println(langLEDlayout);
@@ -1685,6 +1702,10 @@ void ResetTextLEDs(uint32_t color) {
 
   if (langLEDlayout == 3) {  // FR:
     setLED(101, 111, 1);     //  REDEMARRAGE
+  }
+
+  if (langLEDlayout == 4) {  // IT:
+    setLED(33, 42, 1);       // RICOMINCIA
   }
 
   strip.show();
@@ -2964,6 +2985,158 @@ void show_time(int hours, int minutes) {
     }
   }
 
+  // ########################################################### IT:
+  if (langLEDlayout == 4) {  // IT:
+
+    //set hour from 1 to 12 (at noon, or midnight)
+    int xHour = (iHour % 12);
+    if (xHour == 0)
+      xHour = 12;
+    // at minute 40 hour needs to be counted up:
+    if (iMinute >= 40) {
+      if (xHour == 12)
+        xHour = 1;
+      else
+        xHour++;
+    }
+
+    // SONO LE:
+    if (xHour > 1) {      // NOTE: Displayed only from 2 to 23
+      setLED(84, 85, 1);  // LE
+      setLED(48, 51, 1);  // SONO
+      if (testPrintTimeTexts == 1) {
+        Serial.println("");
+        Serial.print(hours);
+        Serial.print(":");
+        Serial.print(minutes);
+        Serial.print(" --> SONO LE ");
+      }
+    }
+
+    switch (xHour) {
+      case 1:
+        {
+          setLED(94, 94, 1);   // È
+          setLED(99, 103, 1);  // L’UNA
+          if (testPrintTimeTexts == 1) Serial.print("È L’UNA ");
+          break;
+        }
+      case 2:
+        {
+          setLED(91, 93, 1);  // DUE
+          if (testPrintTimeTexts == 1) Serial.print("DUE ");
+          break;
+        }
+      case 3:
+        {
+          setLED(96, 98, 1);  // TRE
+          if (testPrintTimeTexts == 1) Serial.print("TRE ");
+          break;
+        }
+      case 4:
+        {
+          setLED(112, 118, 1);  // QUATTRO
+          if (testPrintTimeTexts == 1) Serial.print("QUATTRO ");
+          break;
+        }
+      case 5:
+        {
+          setLED(132, 137, 1);  // CINQUE
+          if (testPrintTimeTexts == 1) Serial.print("CINQUE ");
+          break;
+        }
+      case 6:
+        {
+          setLED(104, 106, 1);  // SEI
+          if (testPrintTimeTexts == 1) Serial.print("SEI ");
+          break;
+        }
+      case 7:
+        {
+          setLED(107, 111, 1);  // SETTE
+          if (testPrintTimeTexts == 1) Serial.print("SETTE ");
+          break;
+        }
+      case 8:
+        {
+          setLED(149, 152, 1);  // OTTO
+          if (testPrintTimeTexts == 1) Serial.print("OTTO ");
+          break;
+        }
+      case 9:
+        {
+          setLED(128, 131, 1);  // NOVE
+          if (testPrintTimeTexts == 1) Serial.print("NOVE ");
+          break;
+        }
+      case 10:
+        {
+          setLED(144, 148, 1);  // DIECI
+          if (testPrintTimeTexts == 1) Serial.print("DIECI ");
+          break;
+        }
+      case 11:
+        {
+          setLED(119, 124, 1);  // UNDICI
+          if (testPrintTimeTexts == 1) Serial.print("UNDICI ");
+          break;
+        }
+      case 12:
+        {
+          setLED(138, 143, 1);  // DODICI
+          if (testPrintTimeTexts == 1) Serial.print("DODICI ");
+          break;
+        }
+    }
+
+    // E:
+    if ((minDiv == 1) || (minDiv == 2) || (minDiv == 3) || (minDiv == 4) || (minDiv == 5) || (minDiv == 6) || (minDiv == 7)) {
+      setLED(162, 162, 1);
+      if (testPrintTimeTexts == 1) Serial.print("E ");
+    }
+    // MENO:
+    if ((minDiv == 8) || (minDiv == 9) || (minDiv == 10) || (minDiv == 11)) {
+      setLED(160, 163, 1);
+      if (testPrintTimeTexts == 1) Serial.print("MENO ");
+    }
+    // 5/55: CINQUE
+    if ((minDiv == 1) || (minDiv == 11)) {
+      setLED(183, 188, 1);
+      if (testPrintTimeTexts == 1) Serial.print("CINQUE ");
+    }
+    // 15/45: UN QUARTO
+    if ((minDiv == 3) || (minDiv == 9)) {
+      setLED(190, 191, 1);  // UN
+      setLED(209, 214, 1);  // QUARTO
+      if (testPrintTimeTexts == 1) Serial.print("UN QUARTO ");
+    }
+    // 10/50: DIECI
+    if ((minDiv == 2) || (minDiv == 10)) {
+      setLED(192, 196, 1);
+      if (testPrintTimeTexts == 1) Serial.print("DIECI ");
+    }
+    // 20/40: VENTI
+    if ((minDiv == 4) || (minDiv == 8)) {
+      setLED(234, 238, 1);
+      if (testPrintTimeTexts == 1) Serial.print("VENTI ");
+    }
+    // 25: VENTICINQUE
+    if (minDiv == 5) {
+      setLED(228, 238, 1);
+      if (testPrintTimeTexts == 1) Serial.print("VENTICINQUE ");
+    }
+    // 30: TRENTA
+    if (minDiv == 6) {
+      setLEDcol(177, 182, 1);
+      if (testPrintTimeTexts == 1) Serial.print("TRENTA ");
+    }
+    // 35: TRENTACINQUE
+    if (minDiv == 7) {
+      setLED(177, 188, 1);
+      if (testPrintTimeTexts == 1) Serial.print("TRENTACINQUE ");
+    }
+  }
+
   // Handle extra words:
   set_extra_words();
   strip.show();
@@ -3114,6 +3287,40 @@ void showMinutes(int minutes) {
         }
     }
   }
+
+  // ##################################################### IT:
+  if (langLEDlayout == 4) {  // IT:
+    switch (minMod) {
+      case 1:
+        {
+          setLED(241, 241, 1);  // +
+          setLED(243, 243, 1);  // 1
+          setLED(248, 253, 1);  // MINUTI
+          break;
+        }
+      case 2:
+        {
+          setLED(241, 241, 1);  // +
+          setLED(244, 244, 1);  // 2
+          setLED(248, 253, 1);  // MINUTI
+          break;
+        }
+      case 3:
+        {
+          setLED(241, 241, 1);  // +
+          setLED(245, 245, 1);  // 3
+          setLED(248, 253, 1);  // MINUTI
+          break;
+        }
+      case 4:
+        {
+          setLED(241, 241, 1);  // +
+          setLED(246, 246, 1);  // 4
+          setLED(248, 253, 1);  // MINUTI
+          break;
+        }
+    }
+  }
 }
 
 
@@ -3169,6 +3376,18 @@ void startup() {
       strip.setPixelColor(i, c1);
     }
   }
+
+
+  if (langLEDlayout == 4) {  // IT:
+    strip.setPixelColor(43, c1);
+    strip.setPixelColor(44, c1);
+    strip.setPixelColor(45, c1);
+    strip.setPixelColor(46, c1);
+    for (uint16_t i = 215; i < 224; i++) {
+      strip.setPixelColor(i, c1);
+    }
+  }
+
 
   strip.show();
   delay(3000);
@@ -3245,6 +3464,9 @@ void initTime(String timezone) {
     if (langLEDlayout == 3) {  // FR:
       setLEDexCol(235, 239, 1, 0, 0, 255);
     }
+    if (langLEDlayout == 4) {  // IT:
+      setLEDexCol(75, 79, 1, 0, 0, 255);
+    }
 
     strip.show();
     delay(500);
@@ -3273,6 +3495,9 @@ void initTime(String timezone) {
     if (langLEDlayout == 3) {  // FR:
       setLEDexCol(235, 239, 1, 255, 0, 0);
     }
+    if (langLEDlayout == 4) {  // IT:
+      setLEDexCol(75, 79, 1, 255, 0, 0);
+    }
 
     strip.show();
     delay(250);
@@ -3295,6 +3520,9 @@ void initTime(String timezone) {
   }
   if (langLEDlayout == 3) {  // FR:
     setLEDexCol(235, 239, 1, 0, 255, 0);
+  }
+  if (langLEDlayout == 4) {  // IT:
+    setLEDexCol(75, 79, 1, 0, 255, 0);
   }
 
   strip.show();
@@ -3513,10 +3741,20 @@ void handleNewMessages(int numNewMessages) {
         welcome += "Use /ew1, /ew2, /ew3, /ew4, /ew5, /ew6, /ew7, /ew8, /ew9, /ew10, /ew11, /ew12 or the menu to set the extra words.\n\n";
         bot.sendMessage(chat_id, welcome);
       }
-    } else {
-      if (text == "/start") {  // All others have 9 extra words:
+    }
+
+    if ((langLEDlayout == 1) || (langLEDlayout == 2) || (langLEDlayout == 3)) {
+      if (text == "/start") {  // All others except IT have 9 extra words:
         String welcome = "Welcome to WordClock Telegram bot, " + from_name + ". " + "\xF0\x9F\x98\x8A" + "\n";
         welcome += "Use /ew1, /ew2, /ew3, /ew4, /ew5, /ew6, /ew7, /ew8, /ew9 or the menu to set the extra words.\n\n";
+        bot.sendMessage(chat_id, welcome);
+      }
+    }
+
+    if (langLEDlayout == 4) {
+      if (text == "/start") {  // IT has 8 extra words only:
+        String welcome = "Welcome to WordClock Telegram bot, " + from_name + ". " + "\xF0\x9F\x98\x8A" + "\n";
+        welcome += "Use /ew1, /ew2, /ew3, /ew4, /ew5, /ew6, /ew7, /ew8 or the menu to set the extra words.\n\n";
         bot.sendMessage(chat_id, welcome);
       }
     }
@@ -3816,6 +4054,64 @@ void set_extra_words() {
       setLEDexCol(84, 87, 1, redVal_ew9, greenVal_ew9, blueVal_ew9);  // ew9
     } else {
       setLED(84, 87, 0);  // ew9
+    }
+  }
+
+  // ########################################################### IT:
+  if (langLEDlayout == 4) {  // IT: 8 extra words only!
+    if (ew1 == 1) {
+      setLEDexCol(16, 20, 1, redVal_ew1, greenVal_ew1, blueVal_ew1);    // ew1 - VIENI QUI = COME HERE text
+      setLEDexCol(125, 127, 1, redVal_ew1, greenVal_ew1, blueVal_ew1);  // ew1 - VIENI QUI = COME HERE text
+    } else {
+      setLED(16, 20, 0);    // ew1
+      setLED(125, 127, 0);  // ew1
+    }
+
+    if (ew2 == 1) {
+      setLEDexCol(1, 3, 1, redVal_ew2, greenVal_ew2, blueVal_ew2);      // ew2 - ORA DI PRANZO - LUNCH TIME text
+      setLEDexCol(144, 145, 1, redVal_ew2, greenVal_ew2, blueVal_ew2);  // ew2 - ORA DI PRANZO - LUNCH TIME text
+      setLEDexCol(153, 158, 1, redVal_ew2, greenVal_ew2, blueVal_ew2);  // ew2 - ORA DI PRANZO - LUNCH TIME text
+    } else {
+      setLED(1, 3, 0);      // ew2
+      setLED(144, 145, 0);  // ew2
+      setLED(153, 158, 0);  // ew2
+    }
+
+    if (ew3 == 1) {
+      setLEDexCol(52, 58, 1, redVal_ew3, greenVal_ew3, blueVal_ew3);  // ew3 - ALLARME - ALARM text
+
+    } else {
+      setLED(52, 58, 0);  // ew3
+    }
+
+    if (ew4 == 1) {
+      setLEDexCol(21, 25, 1, redVal_ew4, greenVal_ew4, blueVal_ew4);  // ew4 - VACANZA - HOLIDAY text
+    } else {
+      setLED(21, 25, 0);  // ew4
+    }
+
+    if (ew5 == 1) {
+      setLEDexCol(197, 207, 1, redVal_ew5, greenVal_ew5, blueVal_ew5);  // ew5 - TEMPERATURA - TEMPERATURE text
+    } else {
+      setLED(197, 207, 0);  // ew5
+    }
+
+    if (ew6 == 1) {
+      setLEDexCol(59, 62, 1, redVal_ew6, greenVal_ew6, blueVal_ew6);  // ew6 - DATA - DATE text
+    } else {
+      setLED(59, 62, 0);  // ew6
+    }
+
+    if (ew7 == 1) {
+      setLEDexCol(80, 89, 1, redVal_ew7, greenVal_ew7, blueVal_ew7);  // ew7 - COMPLEANNO - BIRTHDAY text
+    } else {
+      setLED(80, 89, 0);  // ew7
+    }
+
+    if (ew8 == 1) {
+      setLEDexCol(65, 74, 1, redVal_ew8, greenVal_ew8, blueVal_ew8);  // ew8 - CAMPANELLO - DOORBELL text
+    } else {
+      setLED(65, 74, 0);  // ew8
     }
   }
 }
@@ -4206,6 +4502,12 @@ void SetWLAN(uint32_t color) {
     }
   }
 
+  if (langLEDlayout == 4) {  // IT:
+    for (uint16_t i = 21; i < 25; i++) {
+      strip.setPixelColor(i, color);
+    }
+  }
+
   strip.show();
 }
 
@@ -4399,6 +4701,7 @@ const char config_html[] PROGMEM = R"rawliteral(
           <option value="1">ENGLISH</option>
           <option value="2">DUTCH</option>
           <option value="3">FRENCH</option>
+          <option value="4">ITALIAN (2024 models only)</option>
         </select>
 
     <br/><br/>

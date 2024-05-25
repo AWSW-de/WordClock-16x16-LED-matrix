@@ -9,7 +9,7 @@
 // # Creative Commons Attribution-NonCommercial 3.0 Unported License http://creativecommons.org/licenses/by-nc/3.0
 // # Important: NonCommercial — You may not use the material for commercial purposes !
 // #
-// # Compatible with WordClock version: V3.7.0
+// # Compatible with WordClock version: V3.8.0
 // #
 // ###########################################################################################################################################
 /*
@@ -37,6 +37,7 @@ int langLEDlayout_default = 1;  // Can be selected in the configuraration portal
 // 1 = English
 // 2 = Dutch
 // 3 = French
+// 4 = Italian (2024 models only)
 // NOTE: You may need to use the "Reset WordClock settings"-button to update the value on the device
 
 
@@ -114,7 +115,7 @@ String emoInactive = "\xF0\x9F\x91\x8E";
 /* DE:
 
 
-start - WordClock Telegram welcome message
+start - WordClock Telegram Willkommensnachricht
 ew1 - ALARM text
 ew2 - GEBURTSTAG text
 ew3 - MÜLL RAUS BRINGEN text
@@ -153,7 +154,7 @@ ew9 - DOORBELL text
 /* NL:
 
 
-start - WordClock Telegram welcome message
+start - Welkomstbericht van WordClock Telegram
 ew1 - KOM HIER text
 ew2 - LUNCH TIJD text
 ew3 - ALARM text
@@ -171,7 +172,7 @@ ew9 - DEURBEL text
 /* FR:
 
 
-start - WordClock Telegram welcome message
+start - Message de bienvenue du Telegram WordClock
 ew1 - ALARME text
 ew2 - ANNIVERSAIRE text
 ew3 - POUBELLE text
@@ -184,6 +185,25 @@ ew9 - DATE text
 
 
 */
+
+
+/* IT:
+
+
+start - Messaggio di benvenuto di WordClock Telegram
+ew1 - VIENI QUI text
+ew2 - ORA DI PRANZO text
+ew3 - ALLARME text
+ew4 - VACANZA text
+ew5 - TEMPERATURA text
+ew6 - DATA text
+ew7 - COMPLEANNO text
+ew8 - CAMPANELLO text
+
+
+*/
+
+
 
 // ###########################################################################################################################################
 
