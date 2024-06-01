@@ -61,7 +61,7 @@
 // ###########################################################################################################################################
 // # Version number of the code:
 // ###########################################################################################################################################
-const char* WORD_CLOCK_VERSION = "V3.8.0";
+const char* WORD_CLOCK_VERSION = "V3.8.1";
 
 
 // ###########################################################################################################################################
@@ -1660,6 +1660,7 @@ void buttonResetExtraWords(Control* sender, int type, void* param) {
 // ###########################################################################################################################################
 void buttonUpdate(Control* sender, int type, void* param) {
   preferences.end();
+  useWiFiReCon = 0;  // Temporary set "Active WiFi reconnect to off during the update to avoid problems during the update"
   updatedevice = false;
   delay(1000);
   ESPUI.updateButton(sender->id, "Update mode active now - Use the update url: >>>");
