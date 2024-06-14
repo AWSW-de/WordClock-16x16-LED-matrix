@@ -61,7 +61,7 @@
 // ###########################################################################################################################################
 // # Version number of the code:
 // ###########################################################################################################################################
-const char* WORD_CLOCK_VERSION = "V3.8.1";
+const char* WORD_CLOCK_VERSION = "V3.8.2";
 
 
 // ###########################################################################################################################################
@@ -2427,10 +2427,10 @@ void update_display() {
       show_time(i, 0);
       delay(1000);
     }
-    for (int i = 0; i <= 23; i++) {  // Hours 0 to 23 with all hour and minute texts:
-      for (int y = 0; y < 60; y++) {
+    for (int i = 9; i <= 12; i++) {  // Hours 0 to 23 with all hour and minute texts:
+      for (int y = 0; y < 60; y = y + 5) {
         show_time(i, y);
-        delay(250);
+        delay(3000);
       }
     }
   }
@@ -2523,6 +2523,10 @@ void show_time(int hours, int minutes) {
   int minDiv = iMinute / 5;
   if (usesinglemin == 1) showMinutes(iMinute);
 
+
+  // Handle extra words:
+  set_extra_words();
+  
 
   // ########################################################### DE:
   if (langLEDlayout == 0) {  // DE:
@@ -2991,9 +2995,8 @@ void show_time(int hours, int minutes) {
 
     //set hour from 1 to 12 (at noon, or midnight)
     int xHour = (iHour % 12);
-    if (xHour == 0)
-      xHour = 12;
-    // at minute 40 hour needs to be counted up:
+    if (xHour == 0) xHour = 12;
+    // At minute 40 hour needs to be counted up:
     if (iMinute >= 40) {
       if (xHour == 12)
         xHour = 1;
@@ -3002,14 +3005,16 @@ void show_time(int hours, int minutes) {
     }
 
     // SONO LE:
+    if (testPrintTimeTexts == 1) {
+      Serial.println("");
+      Serial.print(hours);
+      Serial.print(":");
+      Serial.print(minutes);
+    }
     if (xHour > 1) {      // NOTE: Displayed only from 2 to 23
-      setLED(84, 85, 1);  // LE
       setLED(48, 51, 1);  // SONO
+      setLED(84, 85, 1);  // LE
       if (testPrintTimeTexts == 1) {
-        Serial.println("");
-        Serial.print(hours);
-        Serial.print(":");
-        Serial.print(minutes);
         Serial.print(" --> SONO LE ");
       }
     }
@@ -3128,7 +3133,7 @@ void show_time(int hours, int minutes) {
     }
     // 30: TRENTA
     if (minDiv == 6) {
-      setLEDcol(177, 182, 1);
+      setLED(177, 182, 1);
       if (testPrintTimeTexts == 1) Serial.print("TRENTA ");
     }
     // 35: TRENTACINQUE
@@ -3138,8 +3143,6 @@ void show_time(int hours, int minutes) {
     }
   }
 
-  // Handle extra words:
-  set_extra_words();
   strip.show();
 }
 

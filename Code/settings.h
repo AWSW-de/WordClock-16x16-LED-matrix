@@ -9,7 +9,7 @@
 // # Creative Commons Attribution-NonCommercial 3.0 Unported License http://creativecommons.org/licenses/by-nc/3.0
 // # Important: NonCommercial — You may not use the material for commercial purposes !
 // #
-// # Compatible with WordClock version: V3.8.1
+// # Compatible with WordClock version: V3.8.2
 // #
 // ###########################################################################################################################################
 /*
@@ -30,7 +30,7 @@
 // ###########################################################################################################################################
 // # LED language layout default: !!! SET YOUR DEFAULT LANGUAGE HERE !!!
 // ###########################################################################################################################################
-int langLEDlayout_default = 1;  // Can be selected in the configuraration portal later too. This is just the default for the 1st startup
+int langLEDlayout_default = 0;  // Can be selected in the configuraration portal later too. This is just the default for the 1st startup
 // Available languages:
 // ####################
 // 0 = German
@@ -282,7 +282,7 @@ int blueVal_ew12_default = 0;    // Default ew12 color BLUE
 int debugtexts = 0;          // Show more debug information in serial monitor
 int ShowTimeEachSecond = 0;  // Show current time each second in serial monitor
 int testTime = 0;            // LED time text output test
-int testPrintTimeTexts = 0;  // Print the time texts shown on the display in the serial monitor (Currently DE + IT only)
+int testPrintTimeTexts = 0;  // Print the time texts shown on the display in the serial monitor (IT only)
 // Test a special time Online Mode:
 int testspecialtimeON = 0;  // Use test a special time function
 int test_hourON = 23;       // Test a special time: hour
