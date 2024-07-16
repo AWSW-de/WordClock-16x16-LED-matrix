@@ -9,7 +9,7 @@
 // # Creative Commons Attribution-NonCommercial 3.0 Unported License http://creativecommons.org/licenses/by-nc/3.0
 // # Important: NonCommercial — You may not use the material for commercial purposes !
 // #
-// # Compatible with WordClock version: V3.8.2
+// # Compatible with WordClock version: V3.8.3
 // #
 // ###########################################################################################################################################
 /*

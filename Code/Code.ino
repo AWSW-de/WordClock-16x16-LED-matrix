@@ -34,7 +34,7 @@
 // # - Adafruit NeoPixel      // by Adafruit:                     https://github.com/adafruit/Adafruit_NeoPixel
 // # - AsyncTCP               // by me-no-dev:                    https://github.com/me-no-dev/AsyncTCP
 // # - ESPAsyncWebServer      // by me-no-dev:                    https://github.com/me-no-dev/ESPAsyncWebServer
-// # - ESPUI                  // by s00500:                       https://github.com/s00500/ESPUI/archive/refs/tags/2.2.3.zip
+// # - ESPUI                  // by s00500:                       https://github.com/s00500/ESPUI/archive/refs/tags/2.2.3.zip (!!! MAKE SURE NOT TO UPDATE TO >=2.2.4, ESP32 will permanetelly reboot !!!)
 // # - ArduinoJson            // by bblanchon:                    https://github.com/bblanchon/ArduinoJson
 // # - LITTLEFS               // by lorol:                        https://github.com/lorol/LITTLEFS
 // # - UniversalTelegramBot   // by witnessmenow:                 https://github.com/witnessmenow/Universal-Arduino-Telegram-Bot
@@ -61,7 +61,7 @@
 // ###########################################################################################################################################
 // # Version number of the code:
 // ###########################################################################################################################################
-const char* WORD_CLOCK_VERSION = "V3.8.2";
+const char* WORD_CLOCK_VERSION = "V3.8.3";
 
 
 // ###########################################################################################################################################
@@ -4204,7 +4204,7 @@ void handleLEDupdate() {                                            // LED serve
     int paramsNr = request->params();
     // Serial.println(paramsNr);
     for (int i = 0; i < paramsNr; i++) {
-      AsyncWebParameter* p = request->getParam(i);
+      const AsyncWebParameter* p = request->getParam(i);
       // Serial.print("Param name: ");
       // Serial.println(p->name());
       // Serial.print("Param value: ");
@@ -4294,7 +4294,7 @@ void handleLEDupdate() {                                            // LED serve
     int paramsNr = request->params();
 
     for (int i = 0; i < paramsNr; i++) {
-      AsyncWebParameter* p = request->getParam(i);
+      const AsyncWebParameter* p = request->getParam(i);
 
       if ((p->name().toInt() >= 0) && (p->name().toInt() <= 12)) {
         switch (p->name().toInt()) {
@@ -4346,7 +4346,7 @@ void handleLEDupdate() {                                            // LED serve
     // Serial.println(paramsNr);
 
     for (int i = 0; i < paramsNr; i++) {
-      AsyncWebParameter* p = request->getParam(i);
+      const AsyncWebParameter* p = request->getParam(i);
       if ((p->value().toInt() >= 0) && (p->value().toInt() <= 255)) {
         if (String(p->name()) == "ew1") {
           ew1 = p->value().toInt();
