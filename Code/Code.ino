@@ -61,7 +61,7 @@
 // ###########################################################################################################################################
 // # Version number of the code:
 // ###########################################################################################################################################
-const char* WORD_CLOCK_VERSION = "V3.8.3";
+const char* WORD_CLOCK_VERSION = "V3.9.0";
 
 
 // ###########################################################################################################################################
@@ -90,7 +90,6 @@ int UseOnlineMode, OfflineCurrentHour, OfflineCurrentMinute, mySetTimeZone, mySe
 int set_web_intensity = 0;
 int set_web_colors = 0;
 int set_web_ew_color = 0;
-int WiFiManFix = 0;
 bool updatedevice = true;
 bool updatenow = false;
 bool updatemode = false;
@@ -431,6 +430,22 @@ void setupWebInterface() {
       ewtext8 = "8: CAMPANELLO";
     }
 
+
+    // ################################################################## SWE:
+    if (langLEDlayout == 5) {     // SWE:
+      ewtext1 = "1: FÖDELSEDAG";  // Geburtstag
+      ewtext2 = "2: LARM";        // Alarm
+      ewtext3 = "3: HÖGTID";      // Feiertag
+      ewtext4 = "4: SEMESTER";    // Urlaub
+      ewtext5 = "5: LADDA NER";   // Müll Tag
+      ewtext6 = "6: LUNCHTID";    // Mittgszeit
+      ewtext7 = "7: KOM HIT";     // Komm her
+      ewtext8 = "8: DÖRRKLOCKA";  // Türklingel
+      ewtext9 = "9: TEMPERATUR";  // Temperatur
+    }
+
+
+
     // Get the selected colors for the extra words 1 to 12:
 
     // Color Extra Word ew1:
@@ -711,6 +726,7 @@ void setupWebInterface() {
   if (langLEDlayout == 2) selectLangTXT = "Dutch";
   if (langLEDlayout == 3) selectLangTXT = "French";
   if (langLEDlayout == 4) selectLangTXT = "Italian (2024 models only)";
+  if (langLEDlayout == 5) selectLangTXT = "Swedish (2024 models only)";
   Serial.print("Selected language: ");
   Serial.println(selectLangTXT);
 
@@ -721,6 +737,7 @@ void setupWebInterface() {
   ESPUI.addControl(ControlType::Option, "Dutch", "2", ControlColor::Alizarin, selectLang);
   ESPUI.addControl(ControlType::Option, "French", "3", ControlColor::Alizarin, selectLang);
   ESPUI.addControl(ControlType::Option, "Italian (2024 models only)", "4", ControlColor::Alizarin, selectLang);
+  ESPUI.addControl(ControlType::Option, "Swedish (2024 models only)", "5", ControlColor::Alizarin, selectLang);
 
   // Current language:
   statusLanguageID = ESPUI.label("Current layout language", ControlColor::Dark, selectLangTXT);
@@ -1048,6 +1065,7 @@ void call_langauge_select(Control* sender, int type) {
   if (langLEDlayout == 2) selectLangTXT = "Dutch";
   if (langLEDlayout == 3) selectLangTXT = "French";
   if (langLEDlayout == 4) selectLangTXT = "Italian (2024 models only)";
+  if (langLEDlayout == 5) selectLangTXT = "Swedish (2024 models only)";
   if (debugtexts == 1) {
     Serial.print("Selected language ID: ");
     Serial.println(langLEDlayout);
@@ -1707,6 +1725,10 @@ void ResetTextLEDs(uint32_t color) {
 
   if (langLEDlayout == 4) {  // IT:
     setLED(33, 42, 1);       // RICOMINCIA
+  }
+
+  if (langLEDlayout == 5) {  // SWE:
+    setLED(163, 175, 1);     // ÅTERSTÄLLNING
   }
 
   strip.show();
@@ -2526,7 +2548,7 @@ void show_time(int hours, int minutes) {
 
   // Handle extra words:
   set_extra_words();
-  
+
 
   // ########################################################### DE:
   if (langLEDlayout == 0) {  // DE:
@@ -3143,6 +3165,153 @@ void show_time(int hours, int minutes) {
     }
   }
 
+  // ########################################################### SWE:
+  if (langLEDlayout == 5) {  // SWE:
+
+    // KLOCKAN ÄR = ES IST:
+    setLED(6, 7, 1);
+    setLED(9, 15, 1);
+    if (testPrintTimeTexts == 1) {
+      Serial.println("");
+      Serial.print(hours);
+      Serial.print(":");
+      Serial.print(minutes);
+      Serial.print(" --> KLOCKAN ÄR ");
+    }
+
+    // FEM - FÜNF: (Minuten)
+    if ((minDiv == 1) || (minDiv == 7) || (minDiv == 11)) {
+      setLED(136, 138, 1);
+      if (testPrintTimeTexts == 1) Serial.print("FEM ");
+    }
+    // TIO - ZEHN: (Minuten)
+    if ((minDiv == 2) || (minDiv == 10)) {
+      setLED(125, 127, 1);
+      if (testPrintTimeTexts == 1) Serial.print("TIO ");
+    }
+    // KVART - VIERTEL:
+    if ((minDiv == 3) || (minDiv == 9)) {
+      setLED(32, 36, 1);
+      if (testPrintTimeTexts == 1) Serial.print("KVART ");
+    }
+    // TJUGO - ZWANZIG:
+    if ((minDiv == 4) || (minDiv == 8)) {
+      setLED(139, 143, 1);
+      if (testPrintTimeTexts == 1) Serial.print("TJUGO ");
+    }
+    // TJUGOFEM - FÜNFUNDZWANZIG:
+    if (minDiv == 5) {
+      setLED(136, 143, 1);
+      if (testPrintTimeTexts == 1) Serial.print("TJUGOFEM ");
+    }
+    // ÖVER - NACH:
+    if ((minDiv == 1) || (minDiv == 2) || (minDiv == 3) || (minDiv == 4) || (minDiv == 5) || (minDiv == 7)) {
+      setLED(131, 134, 1);
+      if (testPrintTimeTexts == 1) Serial.print("ÖVER ");
+    }
+    // I - VOR:
+    if ((minDiv == 8) || (minDiv == 9) || (minDiv == 10) || (minDiv == 11)) {
+      setLED(145, 145, 1);
+      if (testPrintTimeTexts == 1) Serial.print("I ");
+    }
+    // HALV - HALB:
+    if ((minDiv == 6) || (minDiv == 7)) {
+      setLED(148, 151, 1);
+      if (testPrintTimeTexts == 1) Serial.print("HALV ");
+    }
+
+
+
+    //set hour from 1 to 12 (at noon, or midnight)
+    int xHour = (iHour % 12);
+    if (xHour == 0)
+      xHour = 12;
+    // at minute 25 hour needs to be counted up:
+    // fuenf vor halb 2 = 13:25
+    if (iMinute >= 30) {
+      if (xHour == 12)
+        xHour = 1;
+      else
+        xHour++;
+    }
+
+
+    switch (xHour) {
+      case 1:
+        {
+          setLED(208, 202, 1);  // ETT
+          if (testPrintTimeTexts == 1) Serial.print("ETT ");
+          break;
+        }
+      case 2:
+        {
+          setLED(198, 200, 1);  // TVÅ
+          if (testPrintTimeTexts == 1) Serial.print("TVÅ ");
+          break;
+        }
+      case 3:
+        {
+          setLED(160, 162, 1);  // TRE
+          if (testPrintTimeTexts == 1) Serial.print("TRE ");
+          break;
+        }
+      case 4:
+        {
+          setLED(153, 156, 1);  // FYRA
+          if (testPrintTimeTexts == 1) Serial.print("FYRA ");
+          break;
+        }
+      case 5:
+        {
+          setLED(189, 191, 1);  // FEM
+          if (testPrintTimeTexts == 1) Serial.print("FEM ");
+          break;
+        }
+      case 6:
+        {
+          setLED(157, 159, 1);  // SEX
+          if (testPrintTimeTexts == 1) Serial.print("SEX ");
+          break;
+        }
+      case 7:
+        {
+          setLED(179, 181, 1);  // SJU
+          if (testPrintTimeTexts == 1) Serial.print("SJU ");
+          break;
+        }
+      case 8:
+        {
+          setLED(204, 207, 1);  // ÅTTA
+          if (testPrintTimeTexts == 1) Serial.print("ÅTTA ");
+          break;
+        }
+      case 9:
+        {
+          setLED(186, 188, 1);  // NIO
+          if (testPrintTimeTexts == 1) Serial.print("NIO ");
+          break;
+        }
+      case 10:
+        {
+          setLED(176, 178, 1);  // TIO (Stunden)
+          if (testPrintTimeTexts == 1) Serial.print("TIO ");
+          break;
+        }
+      case 11:
+        {
+          setLED(194, 197, 1);  // ELVA
+          if (testPrintTimeTexts == 1) Serial.print("ELVA ");
+          break;
+        }
+      case 12:
+        {
+          setLED(182, 185, 1);  // TOLV
+          if (testPrintTimeTexts == 1) Serial.print("TOLV ");
+          break;
+        }
+    }
+  }
+
   strip.show();
 }
 
@@ -3325,6 +3494,40 @@ void showMinutes(int minutes) {
         }
     }
   }
+
+  // ##################################################### SWE:
+  if (langLEDlayout == 5) {  // SWE:
+    switch (minMod) {
+      case 1:
+        {
+          setLED(241, 241, 1);  // +
+          setLED(243, 243, 1);  // 1
+          setLED(247, 251, 1);  // MINUT
+          break;
+        }
+      case 2:
+        {
+          setLED(241, 241, 1);  // +
+          setLED(244, 244, 1);  // 2
+          setLED(247, 253, 1);  // MINUTER
+          break;
+        }
+      case 3:
+        {
+          setLED(241, 241, 1);  // +
+          setLED(245, 245, 1);  // 3
+          setLED(247, 253, 1);  // MINUTER
+          break;
+        }
+      case 4:
+        {
+          setLED(241, 241, 1);  // +
+          setLED(246, 246, 1);  // 4
+          setLED(247, 253, 1);  // MINUTER
+          break;
+        }
+    }
+  }
 }
 
 
@@ -3391,6 +3594,18 @@ void startup() {
       strip.setPixelColor(i, c1);
     }
   }
+
+
+  if (langLEDlayout == 5) {  // SWE:
+    strip.setPixelColor(107, c1);
+    strip.setPixelColor(108, c1);
+    strip.setPixelColor(109, c1);
+    strip.setPixelColor(110, c1);
+    for (uint16_t i = 116; i < 125; i++) {
+      strip.setPixelColor(i, c1);
+    }
+  }
+
 
 
   strip.show();
@@ -3471,6 +3686,9 @@ void initTime(String timezone) {
     if (langLEDlayout == 4) {  // IT:
       setLEDexCol(75, 79, 1, 0, 0, 255);
     }
+    if (langLEDlayout == 5) {  // SWE:
+      setLEDexCol(61, 63, 1, 0, 0, 255);
+    }
 
     strip.show();
     delay(500);
@@ -3502,6 +3720,9 @@ void initTime(String timezone) {
     if (langLEDlayout == 4) {  // IT:
       setLEDexCol(75, 79, 1, 255, 0, 0);
     }
+    if (langLEDlayout == 5) {  // SWE:
+      setLEDexCol(61, 63, 1, 255, 0, 0);
+    }
 
     strip.show();
     delay(250);
@@ -3527,6 +3748,9 @@ void initTime(String timezone) {
   }
   if (langLEDlayout == 4) {  // IT:
     setLEDexCol(75, 79, 1, 0, 255, 0);
+  }
+  if (langLEDlayout == 5) {  // SWE:
+    setLEDexCol(61, 63, 1, 0, 255, 0);
   }
 
   strip.show();
@@ -4118,6 +4342,68 @@ void set_extra_words() {
       setLED(65, 74, 0);  // ew8
     }
   }
+
+  // ########################################################### SWE:
+  if (langLEDlayout == 5) {  // SWE:
+    if (ew1 == 1) {
+      setLEDexCol(38, 47, 1, redVal_ew1, greenVal_ew1, blueVal_ew1);  // ew1 - FÖDELSEDAG text
+    } else {
+      setLED(38, 47, 0);  // ew1 - FÖDELSEDAG text
+    }
+
+    if (ew2 == 1) {
+      setLEDexCol(52, 55, 1, redVal_ew2, greenVal_ew2, blueVal_ew2);  // ew2 - LARM text
+    } else {
+      setLED(52, 55, 0);  // ew2 - LARM text
+    }
+
+    if (ew3 == 1) {
+      setLEDexCol(90, 95, 1, redVal_ew3, greenVal_ew3, blueVal_ew3);  // ew3 - HÖGTID text
+
+    } else {
+      setLED(90, 95, 0);  // ew3 - HÖGTID text
+    }
+
+    if (ew4 == 1) {
+      setLEDexCol(65, 76, 1, redVal_ew4, greenVal_ew4, blueVal_ew4);  // ew4 - SEMESTER text
+    } else {
+      setLED(65, 76, 0);  // ew4 - SEMESTER text
+    }
+
+    if (ew5 == 1) {
+      setLEDexCol(0, 4, 1, redVal_ew5, greenVal_ew5, blueVal_ew5);    // ew5 - LADDA  text
+      setLEDexCol(26, 28, 1, redVal_ew5, greenVal_ew5, blueVal_ew5);  // ew5 - NER text
+    } else {
+      setLED(0, 4, 0);    // ew5 - LADDA text
+      setLED(26, 28, 0);  // ew5 - NER text
+    }
+
+    if (ew6 == 1) {
+      setLEDexCol(56, 63, 1, redVal_ew6, greenVal_ew6, blueVal_ew6);  // ew6 - LUNCHTID text
+    } else {
+      setLED(56, 63, 0);  // ew6 - LUNCHTID text
+    }
+
+    if (ew7 == 1) {
+      setLEDexCol(77, 79, 1, redVal_ew7, greenVal_ew7, blueVal_ew7);    // ew7 - KOM text
+      setLEDexCol(128, 130, 1, redVal_ew7, greenVal_ew7, blueVal_ew7);  // ew7 - HIT text
+    } else {
+      setLED(77, 79, 0);    // ew7 - KOM text
+      setLED(128, 130, 0);  // ew7 - HIT text
+    }
+
+    if (ew8 == 1) {
+      setLEDexCol(80, 89, 1, redVal_ew8, greenVal_ew8, blueVal_ew8);  // ew8 - DÖRRKLOCKA text
+    } else {
+      setLED(80, 89, 0);  // ew8 - DÖRRKLOCKA text
+    }
+
+    if (ew9 == 1) {
+      setLEDexCol(16, 25, 1, redVal_ew9, greenVal_ew9, blueVal_ew9);  // ew9 - TEMPERATUR text
+    } else {
+      setLED(16, 25, 0);  // ew9 - TEMPERATUR text
+    }
+  }
 }
 
 
@@ -4512,6 +4798,12 @@ void SetWLAN(uint32_t color) {
     }
   }
 
+  if (langLEDlayout == 5) {  // SWE:
+    for (uint16_t i = 100; i < 104; i++) {
+      strip.setPixelColor(i, color);
+    }
+  }
+
   strip.show();
 }
 
@@ -4706,6 +4998,7 @@ const char config_html[] PROGMEM = R"rawliteral(
           <option value="2">DUTCH</option>
           <option value="3">FRENCH</option>
           <option value="4">ITALIAN (2024 models only)</option>
+          <option value="5">SWEDISH (2024 models only)</option>
         </select>
 
     <br/><br/>

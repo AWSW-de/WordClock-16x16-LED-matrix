@@ -9,7 +9,7 @@
 // # Creative Commons Attribution-NonCommercial 3.0 Unported License http://creativecommons.org/licenses/by-nc/3.0
 // # Important: NonCommercial — You may not use the material for commercial purposes !
 // #
-// # Compatible with WordClock version: V3.8.3
+// # Compatible with WordClock version: V3.9.0
 // #
 // ###########################################################################################################################################
 /*
@@ -38,6 +38,7 @@ int langLEDlayout_default = 0;  // Can be selected in the configuraration portal
 // 2 = Dutch
 // 3 = French
 // 4 = Italian (2024 models only)
+// 5 = Swedish (2024 models only)
 // NOTE: You may need to use the "Reset WordClock settings"-button to update the value on the device
 
 
@@ -203,6 +204,23 @@ ew8 - CAMPANELLO text
 
 */
 
+
+/* SWE:
+
+
+start - WordClock Telegram välkomstmeddelande
+ew1 - FÖDELSEDAG text
+ew2 - LARM text
+ew3 - HÖGTID text
+ew4 - SEMESTER text
+ew5 - LADDA NER text
+ew6 - LUNCHTID text
+ew7 - KOM HIT text
+ew8 - DÖRRKLOCKA text
+ew9 - TEMPERATUR text
+
+
+*/
 
 
 // ###########################################################################################################################################

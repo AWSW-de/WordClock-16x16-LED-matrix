@@ -7,12 +7,13 @@ Code for the <a href="https://www.printables.com/de/search/models?q=WordClock%20
 
 WordClock can be used in "Online Mode" with all the smart functions controlled via your network environment and otional via Telegram and also in "Offline Mode" where you can use the time piece function only without the need of a local WiFi. In both operation modes you can configure the device via the shown internal web portal.
 
-**Layouts for DE, EN, NL, FR and IT available:**
+**Layouts for DE, EN, NL, FR, IT and SWE available:**
 
 <img src="./Images/WordClock_DE_EN.png">
 <img src="./Images/WordClock_NL.jpg">
 <img src="./Images/WordClock_FR.jpg">
 <img src="./Images/WordClock_IT.png">
+<img src="./Images/WordClock_SWE.png">
 
 
 <hr>
