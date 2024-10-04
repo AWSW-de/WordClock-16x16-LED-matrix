@@ -61,7 +61,7 @@
 // ###########################################################################################################################################
 // # Version number of the code:
 // ###########################################################################################################################################
-const char* WORD_CLOCK_VERSION = "V3.9.0";
+const char* WORD_CLOCK_VERSION = "V4.0.0";
 
 
 // ###########################################################################################################################################
@@ -445,6 +445,18 @@ void setupWebInterface() {
     }
 
 
+    // ################################################################## ES:
+    if (langLEDlayout == 6) {           // ES:
+      ewtext1 = "1: CUMPLEAÑOS";        // Geburtstag
+      ewtext2 = "2: ALARMA";            // Alarm
+      ewtext3 = "3: VACACIONES";        // Feiertag/Urlaub
+      ewtext4 = "4: DÍA DE BASURA	";    // Müll Tag
+      ewtext5 = "5: FECHA";             // Termin
+      ewtext6 = "6: HORA DE ALMUERZO";  // Mittgszeit
+      ewtext7 = "7: VEN AQUÍ";          // Komm her
+      ewtext8 = "8: TIMBRE";            // Türklingel
+      ewtext9 = "9: TEMPERATURA";       // Temperatur
+    }
 
     // Get the selected colors for the extra words 1 to 12:
 
@@ -727,6 +739,7 @@ void setupWebInterface() {
   if (langLEDlayout == 3) selectLangTXT = "French";
   if (langLEDlayout == 4) selectLangTXT = "Italian (2024 models only)";
   if (langLEDlayout == 5) selectLangTXT = "Swedish (2024 models only)";
+  if (langLEDlayout == 6) selectLangTXT = "Spanish (2024 models only)";
   Serial.print("Selected language: ");
   Serial.println(selectLangTXT);
 
@@ -738,6 +751,7 @@ void setupWebInterface() {
   ESPUI.addControl(ControlType::Option, "French", "3", ControlColor::Alizarin, selectLang);
   ESPUI.addControl(ControlType::Option, "Italian (2024 models only)", "4", ControlColor::Alizarin, selectLang);
   ESPUI.addControl(ControlType::Option, "Swedish (2024 models only)", "5", ControlColor::Alizarin, selectLang);
+  ESPUI.addControl(ControlType::Option, "Spanish (2024 models only)", "6", ControlColor::Alizarin, selectLang);
 
   // Current language:
   statusLanguageID = ESPUI.label("Current layout language", ControlColor::Dark, selectLangTXT);
@@ -1066,6 +1080,7 @@ void call_langauge_select(Control* sender, int type) {
   if (langLEDlayout == 3) selectLangTXT = "French";
   if (langLEDlayout == 4) selectLangTXT = "Italian (2024 models only)";
   if (langLEDlayout == 5) selectLangTXT = "Swedish (2024 models only)";
+  if (langLEDlayout == 6) selectLangTXT = "Spanish (2024 models only)";
   if (debugtexts == 1) {
     Serial.print("Selected language ID: ");
     Serial.println(langLEDlayout);
@@ -1729,6 +1744,10 @@ void ResetTextLEDs(uint32_t color) {
 
   if (langLEDlayout == 5) {  // SWE:
     setLED(163, 175, 1);     // ÅTERSTÄLLNING
+  }
+
+  if (langLEDlayout == 6) {  // ES:
+    setLED(32, 36, 1);       // RESET
   }
 
   strip.show();
@@ -3312,12 +3331,184 @@ void show_time(int hours, int minutes) {
     }
   }
 
+
+  // ########################################################### ES:
+  if (langLEDlayout == 6) {  // ES:
+
+    // SON LA at 1 or 13 or SON LAS for all other hours:
+    if ((iHour == 1) || (iHour == 13)) {
+      setLED(0, 2, 1);
+      setLED(16, 17, 1);
+      if (testPrintTimeTexts == 1) {
+        Serial.println("");
+        Serial.print(hours);
+        Serial.print(":");
+        Serial.print(minutes);
+        Serial.print(" --> SON LA ");
+      }
+    } else {
+      setLED(0, 2, 1);
+      setLED(16, 18, 1);
+      if (testPrintTimeTexts == 1) {
+        Serial.println("");
+        Serial.print(hours);
+        Serial.print(":");
+        Serial.print(minutes);
+        Serial.print(" --> SON LAS ");
+      }
+    }
+
+    //set hour from 1 to 12 (at noon, or midnight)
+    int xHour = (iHour % 12);
+    if (xHour == 0)
+      xHour = 12;
+    // at minute 35 hour needs to be counted up:
+    // Twenty five to two = 13:35
+    if (iMinute >= 35) {
+      if (xHour == 12)
+        xHour = 1;
+      else
+        xHour++;
+    }
+
+    switch (xHour) {  // Hour numbers in 12 hour format:
+      case 1:
+        {
+          setLED(35, 37, 1);  // UNA / 1
+          if (testPrintTimeTexts == 1) Serial.print("UNA ");
+          break;
+        }
+      case 2:
+        {
+          setLED(29, 31, 1);  // DOS / 2
+          if (testPrintTimeTexts == 1) Serial.print("DOS ");
+          break;
+        }
+      case 3:
+        {
+          setLED(102, 105, 1);  // TRES / 3
+          if (testPrintTimeTexts == 1) Serial.print("TRES ");
+          break;
+        }
+      case 4:
+        {
+          setLED(80, 85, 1);  // CUATRO / 4
+          if (testPrintTimeTexts == 1) Serial.print("CUATRO ");
+          break;
+        }
+      case 5:
+        {
+          setLED(96, 100, 1);  // CINCO / 5
+          if (testPrintTimeTexts == 1) Serial.print("CINCO ");
+          break;
+        }
+      case 6:
+        {
+          setLED(67, 70, 1);  // SEIS / 6
+          if (testPrintTimeTexts == 1) Serial.print("SEIS ");
+          break;
+        }
+      case 7:
+        {
+          setLED(139, 143, 1);  // SIETE / 7
+          if (testPrintTimeTexts == 1) Serial.print("SIETE ");
+          break;
+        }
+      case 8:
+        {
+          setLED(43, 46, 1);  // OCHO / 8
+          if (testPrintTimeTexts == 1) Serial.print("OCHO ");
+          break;
+        }
+      case 9:
+        {
+          setLED(107, 111, 1);  // NUEVE / 9
+          if (testPrintTimeTexts == 1) Serial.print("NUEVE ");
+          break;
+        }
+      case 10:
+        {
+          setLED(112, 115, 1);  // DIEZ / 10
+          if (testPrintTimeTexts == 1) Serial.print("DIEZ ");
+          break;
+        }
+      case 11:
+        {
+          setLED(40, 43, 1);  // ONCE / 11
+          if (testPrintTimeTexts == 1) Serial.print("ONCE ");
+          break;
+        }
+      case 12:
+        {
+          setLED(116, 119, 1);  // DOCE / 12
+          if (testPrintTimeTexts == 1) Serial.print("DOCE ");
+          break;
+        }
+    }
+
+    if (iMinute < 5) {
+      setLED(145, 146, 1);   // EN
+      setLED(197, 201, 1);  // PUNCTO
+      if (testPrintTimeTexts == 1) Serial.print("EN PUNCTO ");
+    }
+
+
+    // Y / PAST: // x:05 + x:10 + x:15 + x:20 + x:25 + x:30
+    if ((minDiv == 1) || (minDiv == 2) || (minDiv == 3) || (minDiv == 4) || (minDiv == 5) || (minDiv == 6)) {
+      setLED(128, 128, 1);
+      if (testPrintTimeTexts == 1) Serial.print("Y ");
+    }
+
+    // MENOS / TO: // x:35 + x:40 + x:45 + x:50 + x:55
+    if ((minDiv == 7) || (minDiv == 8) || (minDiv == 9) || (minDiv == 10) || (minDiv == 11)) {
+      setLED(144, 148, 1);
+      if (testPrintTimeTexts == 1) Serial.print("MENOS ");
+    }
+
+    // VEINTE / TWENTY: // x:20 + x:40
+    if ((minDiv == 4) || (minDiv == 8)) {
+      setLED(160, 165, 1);
+      if (testPrintTimeTexts == 1) Serial.print("VEINTE");
+    }
+
+    // CINCO / FIVE: (Minutes) // x:05 + x:55
+    if ((minDiv == 1) || (minDiv == 11)) {
+      setLED(228, 232, 1);
+      if (testPrintTimeTexts == 1) Serial.print("CINCO");
+    }
+
+    // VEINTICINCO / TWENTYFIVE: (Minutes) // x:25 + x:35
+    if ((minDiv == 5) || (minDiv == 7)) {
+      setLED(228, 238, 1);
+      if (testPrintTimeTexts == 1) Serial.print("VEINTICINCO");
+    }
+
+    // DIEZ / TEN: (Minutes) // x:10 + x:50
+    if ((minDiv == 2) || (minDiv == 10)) {
+      setLED(219, 222, 1);
+      if (testPrintTimeTexts == 1) Serial.print("DIEZ ");
+    }
+
+    // CUARTO / QUARTER: // x:15 + X:45
+    if ((minDiv == 3) || (minDiv == 9)) {
+      setLED(202, 207, 1);
+      if (testPrintTimeTexts == 1) Serial.print("CUARTO ");
+    }
+
+    // MEDIA / HALF: // x:30
+    if ((minDiv == 6)) {
+      setLED(192, 196, 1);
+      if (testPrintTimeTexts == 1) Serial.print("MEDIA ");
+    }
+  }
+
+  // Display time output:
   strip.show();
 }
 
 
 // ###########################################################################################################################################
-// # Display extra minutes function: // TODO 2023
+// # Display extra minutes function: 
 // ###########################################################################################################################################
 void showMinutes(int minutes) {
   int minMod = (minutes % 5);
@@ -3528,6 +3719,40 @@ void showMinutes(int minutes) {
         }
     }
   }
+
+  // ##################################################### ES:
+  if (langLEDlayout == 6) {  // ES:
+    switch (minMod) {
+      case 1:
+        {
+          setLED(240, 240, 1);  // +
+          setLED(242, 242, 1);  // 1
+          setLED(248, 253, 1);  // MINUTO
+          break;
+        }
+      case 2:
+        {
+          setLED(240, 240, 1);  // +
+          setLED(243, 243, 1);  // 2
+          setLED(248, 254, 1);  // MINUTOS
+          break;
+        }
+      case 3:
+        {
+          setLED(240, 240, 1);  // +
+          setLED(244, 244, 1);  // 3
+          setLED(248, 254, 1);  // MINUTOS
+          break;
+        }
+      case 4:
+        {
+          setLED(240, 240, 1);  // +
+          setLED(245, 245, 1);  // 4
+          setLED(248, 254, 1);  // MINUTOS
+          break;
+        }
+    }
+  }
 }
 
 
@@ -3606,6 +3831,15 @@ void startup() {
     }
   }
 
+
+  if (langLEDlayout == 6) {  // ES:
+    for (uint16_t i = 52; i < 56; i++) {
+      strip.setPixelColor(i, c1);
+    }
+    for (uint16_t i = 86; i < 95; i++) {
+      strip.setPixelColor(i, c1);
+    }
+  }
 
 
   strip.show();
@@ -3689,7 +3923,9 @@ void initTime(String timezone) {
     if (langLEDlayout == 5) {  // SWE:
       setLEDexCol(61, 63, 1, 0, 0, 255);
     }
-
+    if (langLEDlayout == 6) {  // ES:
+      setLEDexCol(120, 123, 1, 0, 0, 255);
+    }
     strip.show();
     delay(500);
   }
@@ -3723,7 +3959,9 @@ void initTime(String timezone) {
     if (langLEDlayout == 5) {  // SWE:
       setLEDexCol(61, 63, 1, 255, 0, 0);
     }
-
+    if (langLEDlayout == 6) {  // ES:
+      setLEDexCol(120, 123, 1, 255, 0, 0);
+    }
     strip.show();
     delay(250);
     ClearDisplay();
@@ -3752,7 +3990,9 @@ void initTime(String timezone) {
   if (langLEDlayout == 5) {  // SWE:
     setLEDexCol(61, 63, 1, 0, 255, 0);
   }
-
+  if (langLEDlayout == 6) {  // ES:
+    setLEDexCol(120, 123, 1, 0, 255, 0);
+  }
   strip.show();
   delay(1000);
   Serial.println("Got the time from NTP server: " + NTPserver);
@@ -4359,7 +4599,6 @@ void set_extra_words() {
 
     if (ew3 == 1) {
       setLEDexCol(90, 95, 1, redVal_ew3, greenVal_ew3, blueVal_ew3);  // ew3 - HÖGTID text
-
     } else {
       setLED(90, 95, 0);  // ew3 - HÖGTID text
     }
@@ -4402,6 +4641,73 @@ void set_extra_words() {
       setLEDexCol(16, 25, 1, redVal_ew9, greenVal_ew9, blueVal_ew9);  // ew9 - TEMPERATUR text
     } else {
       setLED(16, 25, 0);  // ew9 - TEMPERATUR text
+    }
+  }
+
+  // ########################################################### ES:
+  if (langLEDlayout == 6) {  // ES:
+    if (ew1 == 1) {
+      setLEDexCol(182, 191, 1, redVal_ew1, greenVal_ew1, blueVal_ew1);  // ew1 - CUMPLEAÑOS text
+    } else {
+      setLED(182, 191, 0);  // ew1 - CUMPLEAÑOS text
+    }
+
+    if (ew2 == 1) {
+      setLEDexCol(57, 62, 1, redVal_ew2, greenVal_ew2, blueVal_ew2);  // ew2 - ALARMA text
+    } else {
+      setLED(57, 62, 0);  // ew2 - ALARMA text
+    }
+
+    if (ew3 == 1) {
+      setLEDexCol(6, 15, 1, redVal_ew3, greenVal_ew3, blueVal_ew3);  // ew3 - VACACIONES text
+    } else {
+      setLED(6, 15, 0);  // ew3 - VACACIONES text
+    }
+
+    if (ew4 == 1) {
+      setLEDexCol(64, 66, 1, redVal_ew4, greenVal_ew4, blueVal_ew4);    // ew4 - DÍA DE BASURA text
+      setLEDexCol(173, 174, 1, redVal_ew4, greenVal_ew4, blueVal_ew4);  // ew4 - DÍA DE BASURA text
+      setLEDexCol(176, 181, 1, redVal_ew4, greenVal_ew4, blueVal_ew4);  // ew4 - DÍA DE BASURA text
+    } else {
+      setLED(64, 66, 0);    // ew4 - DÍA DE BASURA text
+      setLED(173, 174, 0);  // ew4 - DÍA DE BASURA text
+      setLED(176, 181, 0);  // ew4 - DÍA DE BASURA text
+    }
+
+    if (ew5 == 1) {
+      setLEDexCol(48, 52, 1, redVal_ew5, greenVal_ew5, blueVal_ew5);  // ew5 - FECHA  text
+    } else {
+      setLED(48, 52, 0);  // ew5 - FECHA text
+    }
+
+    if (ew6 == 1) {
+      setLEDexCol(120, 123, 1, redVal_ew6, greenVal_ew6, blueVal_ew6);  // ew6 - HORA DE ALMUERZO text
+      setLEDexCol(173, 174, 1, redVal_ew6, greenVal_ew6, blueVal_ew6);  // ew6 - HORA DE ALMUERZO text
+      setLEDexCol(209, 216, 1, redVal_ew6, greenVal_ew6, blueVal_ew6);  // ew6 - HORA DE ALMUERZO text
+    } else {
+      setLED(120, 123, 0);  // ew6 - HORA DE ALMUERZO text
+      setLED(173, 174, 0);  // ew6 - HORA DE ALMUERZO text
+      setLED(209, 216, 0);  // ew6 - HORA DE ALMUERZO text
+    }
+
+    if (ew7 == 1) {
+      setLEDexCol(3, 5, 1, redVal_ew7, greenVal_ew7, blueVal_ew7);    // ew7 - VEN AQUÍ
+      setLEDexCol(19, 22, 1, redVal_ew7, greenVal_ew7, blueVal_ew7);  // ew7 - VEN AQUÍ
+    } else {
+      setLED(3, 5, 0);    // ew7 - VEN AQUÍ
+      setLED(19, 22, 0);  // ew7 - VEN AQUÍ
+    }
+
+    if (ew8 == 1) {
+      setLEDexCol(23, 28, 1, redVal_ew8, greenVal_ew8, blueVal_ew8);  // ew8 - TIMBRE
+    } else {
+      setLED(23, 28, 0);  // ew8 - TIMBRE
+    }
+
+    if (ew9 == 1) {
+      setLEDexCol(149, 159, 1, redVal_ew9, greenVal_ew9, blueVal_ew9);  // ew9 - TEMPERATURA
+    } else {
+      setLED(149, 159, 0);  // ew9 - TEMPERATURA
     }
   }
 }
@@ -4804,6 +5110,12 @@ void SetWLAN(uint32_t color) {
     }
   }
 
+  if (langLEDlayout == 6) {  // ES:
+    for (uint16_t i = 124; i < 128; i++) {
+      strip.setPixelColor(i, color);
+    }
+  }
+
   strip.show();
 }
 
@@ -4999,6 +5311,7 @@ const char config_html[] PROGMEM = R"rawliteral(
           <option value="3">FRENCH</option>
           <option value="4">ITALIAN (2024 models only)</option>
           <option value="5">SWEDISH (2024 models only)</option>
+          <option value="6">SPANISH (2024 models only)</option>
         </select>
 
     <br/><br/>

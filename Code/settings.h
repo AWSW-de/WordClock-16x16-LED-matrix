@@ -9,7 +9,7 @@
 // # Creative Commons Attribution-NonCommercial 3.0 Unported License http://creativecommons.org/licenses/by-nc/3.0
 // # Important: NonCommercial — You may not use the material for commercial purposes !
 // #
-// # Compatible with WordClock version: V3.9.0
+// # Compatible with WordClock version: V4.0.0
 // #
 // ###########################################################################################################################################
 /*
@@ -39,6 +39,7 @@ int langLEDlayout_default = 0;  // Can be selected in the configuraration portal
 // 3 = French
 // 4 = Italian (2024 models only)
 // 5 = Swedish (2024 models only)
+// 6 = Spanish (2024 models only)
 // NOTE: You may need to use the "Reset WordClock settings"-button to update the value on the device
 
 
@@ -117,18 +118,18 @@ String emoInactive = "\xF0\x9F\x91\x8E";
 
 
 start - WordClock Telegram Willkommensnachricht
-ew1 - ALARM text
-ew2 - GEBURTSTAG text
-ew3 - MÜLL RAUS BRINGEN text
-ew4 - AUTO text
-ew5 - FEIERTAG text
-ew6 - FORMEL1 text
-ew7 - GELBER SACK text
-ew8 - URLAUB text
-ew9 - WERKSTATT text
-ew10 - ZEIT ZUM ZOCKEN text
-ew11 - FRISEUR text
-ew12 - TERMIN text
+ew1 - ALARM 
+ew2 - GEBURTSTAG 
+ew3 - MÜLL RAUS BRINGEN 
+ew4 - AUTO 
+ew5 - FEIERTAG 
+ew6 - FORMEL1 
+ew7 - GELBER SACK 
+ew8 - URLAUB 
+ew9 - WERKSTATT 
+ew10 - ZEIT ZUM ZOCKEN 
+ew11 - FRISEUR 
+ew12 - TERMIN 
 
 
 */
@@ -138,15 +139,15 @@ ew12 - TERMIN text
 
 
 start - WordClock Telegram welcome message
-ew1 - COME HERE text
-ew2 - LUNCH TIME text
-ew3 - ALARM text
-ew4 - GARBAGE text
-ew5 - HOLIDAY text
-ew6 - TEMPERATURE text
-ew7 - DATE text
-ew8 - BIRTHDAY text
-ew9 - DOORBELL text
+ew1 - COME HERE 
+ew2 - LUNCH TIME 
+ew3 - ALARM 
+ew4 - GARBAGE 
+ew5 - HOLIDAY 
+ew6 - TEMPERATURE 
+ew7 - DATE 
+ew8 - BIRTHDAY 
+ew9 - DOORBELL 
 
 
 */
@@ -156,15 +157,15 @@ ew9 - DOORBELL text
 
 
 start - Welkomstbericht van WordClock Telegram
-ew1 - KOM HIER text
-ew2 - LUNCH TIJD text
-ew3 - ALARM text
-ew4 - AFVAL text
-ew5 - VAKANTIE text
-ew6 - TEMPERATUUR text
-ew7 - DATUM text
-ew8 - VERJAARDAG text
-ew9 - DEURBEL text
+ew1 - KOM HIER 
+ew2 - LUNCH TIJD 
+ew3 - ALARM 
+ew4 - AFVAL 
+ew5 - VAKANTIE 
+ew6 - TEMPERATUUR 
+ew7 - DATUM 
+ew8 - VERJAARDAG 
+ew9 - DEURBEL 
 
 
 */
@@ -174,15 +175,15 @@ ew9 - DEURBEL text
 
 
 start - Message de bienvenue du Telegram WordClock
-ew1 - ALARME text
-ew2 - ANNIVERSAIRE text
-ew3 - POUBELLE text
-ew4 - A TABLE text
-ew5 - VACANCES text
-ew6 - VIENS ICI text
-ew7 - SONNETTE text
-ew8 - TEMPERATURE text
-ew9 - DATE text
+ew1 - ALARME 
+ew2 - ANNIVERSAIRE 
+ew3 - POUBELLE 
+ew4 - A TABLE 
+ew5 - VACANCES 
+ew6 - VIENS ICI 
+ew7 - SONNETTE 
+ew8 - TEMPERATURE 
+ew9 - DATE 
 
 
 */
@@ -192,14 +193,14 @@ ew9 - DATE text
 
 
 start - Messaggio di benvenuto di WordClock Telegram
-ew1 - VIENI QUI text
-ew2 - ORA DI PRANZO text
-ew3 - ALLARME text
-ew4 - VACANZA text
-ew5 - TEMPERATURA text
-ew6 - DATA text
-ew7 - COMPLEANNO text
-ew8 - CAMPANELLO text
+ew1 - VIENI QUI 
+ew2 - ORA DI PRANZO 
+ew3 - ALLARME 
+ew4 - VACANZA 
+ew5 - TEMPERATURA 
+ew6 - DATA 
+ew7 - COMPLEANNO 
+ew8 - CAMPANELLO 
 
 
 */
@@ -209,15 +210,33 @@ ew8 - CAMPANELLO text
 
 
 start - WordClock Telegram välkomstmeddelande
-ew1 - FÖDELSEDAG text
-ew2 - LARM text
-ew3 - HÖGTID text
-ew4 - SEMESTER text
-ew5 - LADDA NER text
-ew6 - LUNCHTID text
-ew7 - KOM HIT text
-ew8 - DÖRRKLOCKA text
-ew9 - TEMPERATUR text
+ew1 - FÖDELSEDAG 
+ew2 - LARM 
+ew3 - HÖGTID 
+ew4 - SEMESTER 
+ew5 - LADDA NER 
+ew6 - LUNCHTID 
+ew7 - KOM HIT 
+ew8 - DÖRRKLOCKA 
+ew9 - TEMPERATUR 
+
+
+*/
+
+
+/* ES:
+
+
+inicio - Mensaje de bienvenida de WordClock Telegram
+ew1 - CUMPLEAÑOS
+ew2 - ALARMA
+ew3 - VACACIONES
+ew4 - DÍA DE BASURA	
+ew5 - FECHA
+ew6 - HORA DE ALMUERZO
+ew7 - VEN AQUÍ
+ew8 - TIMBRE
+ew9 - TEMPERATURA
 
 
 */
